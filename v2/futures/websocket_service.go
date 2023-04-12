@@ -997,3 +997,9 @@ func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler Err
 	}
 	return wsServe(cfg, wsHandler, errHandler)
 }
+
+func WsUserDataServeOld(listenKey string, handler WsHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/%s", getWsEndpoint(), listenKey)
+	cfg := newWsConfig(endpoint)
+	return wsServe(cfg, handler, errHandler)
+}

@@ -564,6 +564,12 @@ type WsOCOOrder struct {
 // WsUserDataHandler handle WsUserDataEvent
 type WsUserDataHandler func(event *WsUserDataEvent)
 
+func WsUserDataServeOld(listenKey string, handler WsHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/%s", getWsEndpoint(), listenKey)
+	cfg := newWsConfig(endpoint)
+	return wsServe(cfg, handler, errHandler)
+}
+
 // WsUserDataServe serve user data handler with listen key
 func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
 	endpoint := fmt.Sprintf("%s/%s", getWsEndpoint(), listenKey)
