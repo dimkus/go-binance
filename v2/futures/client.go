@@ -604,3 +604,23 @@ func (c *Client) NewOpenInterestStatisticsService() *OpenInterestStatisticsServi
 func (c *Client) NewLongShortRatioService() *LongShortRatioService {
 	return &LongShortRatioService{c: c}
 }
+
+// NewGetIncomeHistoryService init getting income history service
+func (c *Client) NewGetIncomeHistoryServiceAsyncDownloadId() *GetIncomeHistoryServiceAsyncDownloadId {
+	return &GetIncomeHistoryServiceAsyncDownloadId{c: c}
+}
+
+// NewGetIncomeHistoryService init getting income history service
+func (c *Client) NewGetIncomeHistoryServiceAsyncDownload() *GetIncomeHistoryAyncDownload {
+	return &GetIncomeHistoryAyncDownload{c: c}
+}
+
+// GetTradeHistoryServiceAsyncDownloadId init getting trade history service
+func (c *Client) NewGetTradeHistoryServiceAsyncDownloadId() *GetTradeHistoryServiceAsyncDownloadId {
+	return &GetTradeHistoryServiceAsyncDownloadId{c: c}
+}
+
+// GetTradeHistoryAyncDownload init getting trade history service
+func (c *Client) NewGetTradeHistoryServiceAsyncDownload() *GetTradeHistoryAsyncDownload {
+	return &GetTradeHistoryAsyncDownload{c: c}
+}
