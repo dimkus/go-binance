@@ -90,7 +90,7 @@ func (s *GetTradeHistoryAsyncDownload) DownloadId(downloadId string) *GetTradeHi
 func (s *GetTradeHistoryAsyncDownload) Do(ctx context.Context, opts ...RequestOption) (res *TradeHistoryAsyncDownload, err error) {
 	r := &request{
 		method:   http.MethodGet,
-		endpoint: "/fapi/v1/income/trades/id",
+		endpoint: "/fapi/v1/income/trade/id",
 		secType:  secTypeSigned,
 	}
 	res = new(TradeHistoryAsyncDownload)
