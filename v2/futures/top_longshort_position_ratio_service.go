@@ -6,8 +6,8 @@ import (
 	"net/http"
 )
 
-// LongShortRatioService list open history data of a symbol.
-type LongShortRatioService struct {
+// TopLongShortPositionRatioService list open history data of a symbol.
+type TopLongShortPositionRatioService struct {
 	c         *Client
 	symbol    string
 	period    string
@@ -17,40 +17,40 @@ type LongShortRatioService struct {
 }
 
 // Symbol set symbol
-func (s *LongShortRatioService) Symbol(symbol string) *LongShortRatioService {
+func (s *TopLongShortPositionRatioService) Symbol(symbol string) *TopLongShortPositionRatioService {
 	s.symbol = symbol
 	return s
 }
 
 // Period set period interval
-func (s *LongShortRatioService) Period(period string) *LongShortRatioService {
+func (s *TopLongShortPositionRatioService) Period(period string) *TopLongShortPositionRatioService {
 	s.period = period
 	return s
 }
 
 // Limit set limit
-func (s *LongShortRatioService) Limit(limit int) *LongShortRatioService {
+func (s *TopLongShortPositionRatioService) Limit(limit int) *TopLongShortPositionRatioService {
 	s.limit = &limit
 	return s
 }
 
 // StartTime set startTime
-func (s *LongShortRatioService) StartTime(startTime int64) *LongShortRatioService {
+func (s *TopLongShortPositionRatioService) StartTime(startTime int64) *TopLongShortPositionRatioService {
 	s.startTime = &startTime
 	return s
 }
 
 // EndTime set endTime
-func (s *LongShortRatioService) EndTime(endTime int64) *LongShortRatioService {
+func (s *TopLongShortPositionRatioService) EndTime(endTime int64) *TopLongShortPositionRatioService {
 	s.endTime = &endTime
 	return s
 }
 
 // Do send request
-func (s *LongShortRatioService) Do(ctx context.Context, opts ...RequestOption) (res []*LongShortRatio, err error) {
+func (s *TopLongShortPositionRatioService) Do(ctx context.Context, opts ...RequestOption) (res []*TopLongShortPositionRatio, err error) {
 	r := &request{
 		method:   http.MethodGet,
-		endpoint: "/futures/data/globalLongShortAccountRatio",
+		endpoint: "/futures/data/topLongShortPositionRatio",
 	}
 
 	r.setParam("symbol", s.symbol)
@@ -68,19 +68,19 @@ func (s *LongShortRatioService) Do(ctx context.Context, opts ...RequestOption) (
 
 	data, _, err := s.c.callAPI(ctx, r, opts...)
 	if err != nil {
-		return []*LongShortRatio{}, err
+		return []*TopLongShortPositionRatio{}, err
 	}
 
-	res = make([]*LongShortRatio, 0)
+	res = make([]*TopLongShortPositionRatio, 0)
 	err = json.Unmarshal(data, &res)
 	if err != nil {
-		return []*LongShortRatio{}, err
+		return []*TopLongShortPositionRatio{}, err
 	}
 
 	return res, nil
 }
 
-type LongShortRatio struct {
+type TopLongShortPositionRatio struct {
 	Symbol         string `json:"symbol"`
 	LongShortRatio string `json:"longShortRatio"`
 	LongAccount    string `json:"longAccount"`

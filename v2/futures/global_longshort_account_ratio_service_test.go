@@ -50,7 +50,7 @@ func (s *longShortRatioServiceTestSuite) TestOpenInterestStatistics() {
 		s.assertRequestEqual(e, r)
 	})
 
-	longShortRatios, err := s.client.NewLongShortRatioService().Symbol(symbol).
+	longShortRatios, err := s.client.NewGlobalLongShortRatioService().Symbol(symbol).
 		Period(period).Limit(limit).StartTime(startTime).
 		EndTime(endTime).Do(newContext())
 

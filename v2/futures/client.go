@@ -600,9 +600,19 @@ func (c *Client) NewOpenInterestStatisticsService() *OpenInterestStatisticsServi
 	return &OpenInterestStatisticsService{c: c}
 }
 
-// NewLongShortRatioService init open interest statistics service
-func (c *Client) NewLongShortRatioService() *LongShortRatioService {
-	return &LongShortRatioService{c: c}
+// NewGlobalLongShortAccountRatioService init open interest statistics service
+func (c *Client) NewGlobalLongShortAccountService() *GlobalLongShortAccountRatioService {
+	return &GlobalLongShortAccountRatioService{c: c}
+}
+
+// NewGlobalLongShortAccountRatioService init open interest statistics service
+func (c *Client) NewTopLongShortAccountService() *TopLongShortAccountRatioService {
+	return &TopLongShortAccountRatioService{c: c}
+}
+
+// NewTopLongShortPositionRatioService init open interest statistics service
+func (c *Client) NewTopLongShortPositionRatioService() *TopLongShortPositionRatioService {
+	return &TopLongShortPositionRatioService{c: c}
 }
 
 // NewGetIncomeHistoryService init getting income history service
