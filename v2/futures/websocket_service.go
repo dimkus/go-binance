@@ -536,6 +536,27 @@ func WsAllBookTickerServe(handler WsBookTickerHandler, errHandler ErrHandler) (d
 	return wsServe(cfg, wsHandler, errHandler)
 }
 
+// WsCombinedBookTickerServe is similar to WsBookTickerServe, but it is for multiple symbols
+func WsCombinedBookTickerServe(symbols []string, handler WsBookTickerHandler, errHandler ErrHandler) (doneC, stopC chan struct{}, err error) {
+	endpoint := fmt.Sprintf("%s/", getWsEndpoint())
+	for _, s := range symbols {
+		endpoint += fmt.Sprintf("%s@bookTicker", strings.ToLower(s)) + "/"
+	}
+
+	endpoint = endpoint[:len(endpoint)-1]
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		event := new(WsBookTickerEvent)
+		err := json.Unmarshal(message, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		handler(event)
+	}
+	return wsServe(cfg, wsHandler, errHandler)
+}
+
 // WsLiquidationOrderEvent define websocket liquidation order event.
 type WsLiquidationOrderEvent struct {
 	Event            string             `json:"e"`
