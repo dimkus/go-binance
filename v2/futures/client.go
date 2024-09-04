@@ -164,6 +164,7 @@ const (
 	UserDataEventTypeMarginCall          UserDataEventType = "MARGIN_CALL"
 	UserDataEventTypeAccountUpdate       UserDataEventType = "ACCOUNT_UPDATE"
 	UserDataEventTypeOrderTradeUpdate    UserDataEventType = "ORDER_TRADE_UPDATE"
+	UserDataEventTypeTradeLite           UserDataEventType = "TRADE_LITE"
 	UserDataEventTypeAccountConfigUpdate UserDataEventType = "ACCOUNT_CONFIG_UPDATE"
 
 	UserDataEventReasonTypeDeposit             UserDataEventReasonType = "DEPOSIT"
