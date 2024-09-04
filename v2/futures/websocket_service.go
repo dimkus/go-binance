@@ -1136,7 +1136,7 @@ func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler Err
 		// {"e":"TRADE_LITE","E":1725462902696,"T":1725462902695,"s":"ETCUSDT","q":"350.10","p":"0.000","m":false,"c":"x-hGBqJOcM1420274314_2099272109","S":"BUY","L":"18.030","l":"40.11","t":937937665,"i":23178780330}
 
 		// FIXME: skip TRADE_LITE event
-		if strings.HasPrefix("{\"e\":\"TRADE_LITE\",", string(message)) {
+		if strings.HasPrefix(string(message), "{\"e\":\"TRADE_LITE\",") {
 			return
 		}
 
