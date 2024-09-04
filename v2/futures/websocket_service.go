@@ -1123,16 +1123,21 @@ func WsUserDataServe(listenKey string, handler WsUserDataHandler, errHandler Err
 	wsHandler := func(message []byte) {
 
 		/*
-			FIXME: skip TRADE_LITE event
-			https://www.binance.com/en/support/announcement/introducing-trade-lite-for-usd%E2%93%A2-m-futures-websocket-2024-09-03-f2809259702b46f7abdc9c97b977908f
+				FIXME: skip TRADE_LITE event
+				https://www.binance.com/en/support/announcement/introducing-trade-lite-for-usd%E2%93%A2-m-futures-websocket-2024-09-03-f2809259702b46f7abdc9c97b977908f
 
-			{"e":"ORDER_TRADE_UPDATE","T":1725462901305,"E":1725462901305,"o":{"s":"ETCUSDT","c":"x-hGBqJOcM1420269833_1945678308","S":"BUY","o":"LIMIT","f":"GTC","q":"350.10","p":"18.024","ap":"0","sp":"0","x":"NEW","X":"NEW","i":23178779928,"l":"0","z":"0","L":"0","n":"0","N":"USDT","T":1725462901305,"t":0,"b":"6310.20240","a":"0","m":false,"R":false,"wt":"CONTRACT_PRICE","ot":"LIMIT","ps":"BOTH","cp":false,"rp":"0","pP":false,"si":0,"ss":0,"V":"NONE","pm":"NONE","gtd":0}}
-			{"e":"TRADE_LITE","E":1725462902696,"T":1725462902695,"s":"ETCUSDT","q":"350.10","p":"0.000","m":false,"c":"x-hGBqJOcM1420274314_2099272109","S":"BUY","L":"18.030","l":"52.74","t":937937664,"i":23178780330}
+				{"e":"ORDER_TRADE_UPDATE","T":1725462901305,"E":1725462901305,"o":{"s":"ETCUSDT","c":"x-hGBqJOcM1420269833_1945678308","S":"BUY","o":"LIMIT","f":"GTC","q":"350.10","p":"18.024","ap":"0","sp":"0","x":"NEW","X":"NEW","i":23178779928,"l":"0","z":"0","L":"0","n":"0","N":"USDT","T":1725462901305,"t":0,"b":"6310.20240","a":"0","m":false,"R":false,"wt":"CONTRACT_PRICE","ot":"LIMIT","ps":"BOTH","cp":false,"rp":"0","pP":false,"si":0,"ss":0,"V":"NONE","pm":"NONE","gtd":0}}
+				{"e":"TRADE_LITE","E":1725462902696,"T":1725462902695,"s":"ETCUSDT","q":"350.10","p":"0.000","m":false,"c":"x-hGBqJOcM1420274314_2099272109","S":"BUY","L":"18.030","l":"52.74","t":937937664,"i":23178780330}
 
-			{"e":"ORDER_TRADE_UPDATE","T":1725462901591,"E":1725462901591,"o":{"s":"ETCUSDT","c":"x-hGBqJOcM1420275256_949569752","S":"BUY","o":"LIMIT","f":"GTC","q":"271.79","p":"18.024","ap":"0","sp":"0","x":"NEW","X":"NEW","i":23178780068,"l":"0","z":"0","L":"0","n":"0","N":"USDT","T":1725462901591,"t":0,"b":"11208.94536","a":"0","m":false,"R":false,"wt":"CONTRACT_PRICE","ot":"LIMIT","ps":"BOTH","cp":false,"rp":"0","pP":false,"si":0,"ss":0,"V":"NONE","pm":"NONE","gtd":0}}
-			{"e":"TRADE_LITE","E":1725462972436,"T":1725462972436,"s":"ETCUSDT","q":"271.79","p":"18.024","m":true,"c":"x-hGBqJOcM1420275256_949569752","S":"BUY","L":"18.024","l":"271.79","t":937937846,"i":23178780068}
+				{"e":"ORDER_TRADE_UPDATE","T":1725462901591,"E":1725462901591,"o":{"s":"ETCUSDT","c":"x-hGBqJOcM1420275256_949569752","S":"BUY","o":"LIMIT","f":"GTC","q":"271.79","p":"18.024","ap":"0","sp":"0","x":"NEW","X":"NEW","i":23178780068,"l":"0","z":"0","L":"0","n":"0","N":"USDT","T":1725462901591,"t":0,"b":"11208.94536","a":"0","m":false,"R":false,"wt":"CONTRACT_PRICE","ot":"LIMIT","ps":"BOTH","cp":false,"rp":"0","pP":false,"si":0,"ss":0,"V":"NONE","pm":"NONE","gtd":0}}
+				{"e":"TRADE_LITE","E":1725462972436,"T":1725462972436,"s":"ETCUSDT","q":"271.79","p":"18.024","m":true,"c":"x-hGBqJOcM1420275256_949569752","S":"BUY","L":"18.024","l":"271.79","t":937937846,"i":23178780068}
+
+			The "TRADE_LITE" event is sent by the FSTREAM-MM that was subscribed by the listenkey of Futures Market Makers (MM).
+			If you want to get the price of your own trades, you can use the GET /fapi/v1/userTrades
+			endpoint: https://binance-docs.github.io/apidocs/futures/en/#account-trade-list-user_data
+				-admin
 		*/
-		if strings.Index(string(message), "\"TRADE_LITE") != -1 {
+		if strings.Index(string(message), "\"TRADE_LITE\"") != -1 {
 			return
 		}
 
