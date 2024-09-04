@@ -1,6 +1,9 @@
 package futures
 
 import (
+	"context"
+	"github.com/dimkus/go-binance/v2/common"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -67,16 +70,16 @@ func (s *orderServiceTestSuite) TestCreateOrder() {
 			"timeInForce":      timeInForce,
 			"positionSide":     positionSide,
 			"quantity":         quantity,
-			"reduceOnly":       reduceOnly,
+			"reduceOnly":       strconv.FormatBool(reduceOnly),
 			"price":            price,
 			"newClientOrderId": newClientOrderID,
 			"stopPrice":        stopPrice,
 			"workingType":      workingType,
 			"activationPrice":  activationPrice,
 			"callbackRate":     callbackRate,
-			"priceProtect":     priceProtect,
+			"priceProtect":     strconv.FormatBool(priceProtect),
 			"newOrderRespType": newOrderResponseType,
-			"closePosition":    closePosition,
+			"closePosition":    strconv.FormatBool(closePosition),
 		})
 		s.assertRequestEqual(e, r)
 	})
@@ -433,6 +436,120 @@ func (s *orderServiceTestSuite) TestListOrders() {
 	s.assertOrderEqual(e, orders[0])
 }
 
+func (s *orderServiceTestSuite) TestModifyOrder() {
+	data := []byte(`{
+		"orderId": 20072994037,
+		"symbol": "BTCUSDT",
+		"pair": "BTCUSDT",
+		"status": "NEW",
+		"clientOrderId": "LJ9R4QZDihCaS8UAOOLpgW",
+		"price": "30005",
+		"avgPrice": "0.0",
+		"origQty": "1",
+		"executedQty": "0",
+		"cumQty": "0",
+		"cumBase": "0",
+		"timeInForce": "GTC",
+		"type": "LIMIT",
+		"reduceOnly": false,
+		"closePosition": false,
+		"side": "BUY",
+		"positionSide": "LONG",
+		"stopPrice": "0",
+		"workingType": "CONTRACT_PRICE",
+		"priceProtect": false,
+		"origType": "LIMIT",
+		"priceMatch": "NONE",
+		"selfTradePreventionMode": "NONE",
+		"goodTillDate": 0,
+		"updateTime": 1629182711600
+	}`)
+	s.mockDo(data, nil)
+	defer s.assertDo()
+
+	orderID := int64(20072994037)
+	origClientOrderID := "LJ9R4QZDihCaS8UAOOLpgW"
+	symbol := "BTCUSDT"
+	side := SideTypeBuy
+	quantity := "1"
+	price := "30005"
+	priceMatch := PriceMatchTypeNone
+	s.assertReq(func(r *request) {
+		e := newSignedRequest().setFormParams(params{
+			"orderId":           orderID,
+			"origClientOrderId": origClientOrderID,
+			"symbol":            symbol,
+			"side":              side,
+			"quantity":          quantity,
+			"price":             price,
+			"priceMatch":        priceMatch,
+		})
+		s.assertRequestEqual(e, r)
+	})
+
+	res, err := s.client.NewModifyOrderService().OrderID(orderID).OrigClientOrderID(origClientOrderID).
+		Symbol(symbol).Side(side).Quantity(quantity).Price(price).PriceMatch(priceMatch).Do(newContext())
+	r := s.r()
+	r.NoError(err)
+	e := &ModifyOrderResponse{
+		OrderID:                 orderID,
+		Symbol:                  symbol,
+		Pair:                    "BTCUSDT",
+		Status:                  OrderStatusTypeNew,
+		ClientOrderID:           origClientOrderID,
+		Price:                   price,
+		AveragePrice:            "0.0",
+		OriginalQuantity:        quantity,
+		ExecutedQuantity:        "0",
+		CumulativeQuantity:      "0",
+		CumulativeBase:          "0",
+		TimeInForce:             TimeInForceTypeGTC,
+		Type:                    OrderTypeLimit,
+		ReduceOnly:              false,
+		ClosePosition:           false,
+		Side:                    side,
+		PositionSide:            PositionSideTypeLong,
+		StopPrice:               "0",
+		WorkingType:             WorkingTypeContractPrice,
+		PriceProtect:            false,
+		OriginalType:            OrderTypeLimit,
+		PriceMatch:              priceMatch,
+		SelfTradePreventionMode: "NONE",
+		GoodTillDate:            0,
+		UpdateTime:              1629182711600,
+	}
+	s.assertModifyOrderResponseEqual(e, res)
+}
+
+func (s *baseOrderTestSuite) assertModifyOrderResponseEqual(e, a *ModifyOrderResponse) {
+	r := s.r()
+	r.Equal(e.OrderID, a.OrderID, "OrderID")
+	r.Equal(e.Symbol, a.Symbol, "Symbol")
+	r.Equal(e.Pair, a.Pair, "Pair")
+	r.Equal(e.Status, a.Status, "Status")
+	r.Equal(e.ClientOrderID, a.ClientOrderID, "ClientOrderID")
+	r.Equal(e.Price, a.Price, "Price")
+	r.Equal(e.AveragePrice, a.AveragePrice, "AveragePrice")
+	r.Equal(e.OriginalQuantity, a.OriginalQuantity, "OriginalQuantity")
+	r.Equal(e.ExecutedQuantity, a.ExecutedQuantity, "ExecutedQuantity")
+	r.Equal(e.CumulativeQuantity, a.CumulativeQuantity, "CumulativeQuantity")
+	r.Equal(e.CumulativeBase, a.CumulativeBase, "CumulativeBase")
+	r.Equal(e.TimeInForce, a.TimeInForce, "TimeInForce")
+	r.Equal(e.Type, a.Type, "Type")
+	r.Equal(e.ReduceOnly, a.ReduceOnly, "ReduceOnly")
+	r.Equal(e.ClosePosition, a.ClosePosition, "ClosePosition")
+	r.Equal(e.Side, a.Side, "Side")
+	r.Equal(e.PositionSide, a.PositionSide, "PositionSide")
+	r.Equal(e.StopPrice, a.StopPrice, "StopPrice")
+	r.Equal(e.WorkingType, a.WorkingType, "WorkingType")
+	r.Equal(e.PriceProtect, a.PriceProtect, "PriceProtect")
+	r.Equal(e.OriginalType, a.OriginalType, "OriginalType")
+	r.Equal(e.PriceMatch, a.PriceMatch, "PriceMatch")
+	r.Equal(e.SelfTradePreventionMode, a.SelfTradePreventionMode, "SelfTradePreventionMode")
+	r.Equal(e.GoodTillDate, a.GoodTillDate, "GoodTillDate")
+	r.Equal(e.UpdateTime, a.UpdateTime, "UpdateTime")
+}
+
 func (s *orderServiceTestSuite) TestCancelOrder() {
 	data := []byte(`{
 		"clientOrderId": "myOrder1",
@@ -612,4 +729,97 @@ func (s *orderServiceTestSuite) assertLiquidationEqual(e, a *LiquidationOrder) {
 	r.Equal(e.TimeInForce, a.TimeInForce, "TimeInForce")
 	r.Equal(e.Type, a.Type, "Type")
 	r.Equal(e.Side, a.Side, "Side")
+}
+
+func (s *orderServiceTestSuite) TestCreateBatchOrders() {
+	data := []byte(`[
+		{
+			"code": -2014, 
+			"msg": "API-key format invalid."
+		},
+		{
+			"clientOrderId": "testOrder",
+			"cumQty": "0",
+			"cumQuote": "0",
+			"executedQty": "0",
+			"orderId": 22542179,
+			"avgPrice": "0.00000",
+			"origQty": "10",
+			"price": "100",
+			"reduceOnly": false,
+			"side": "BUY",
+			"positionSide": "SHORT",
+			"status": "NEW",
+			"stopPrice": "9300",
+			"symbol": "BTCUSDT",
+			"timeInForce": "GTC",
+			"type": "TRAILING_STOP_MARKET",
+			"origType": "TRAILING_STOP_MARKET",
+			"activatePrice": "9020",
+			"priceRate": "0.3",
+			"updateTime": 1566818724722,
+			"workingType": "CONTRACT_PRICE",
+			"priceProtect": false,            
+			"priceMatch": "NONE",             
+			"selfTradePreventionMode": "NONE", 
+			"goodTillDate": 0
+		},
+		{
+			"code": -2022, 
+			"msg": "ReduceOnly Order is rejected."
+		}
+	]`)
+	s.mockDo(data, nil)
+	defer s.assertDo()
+
+	res, err := s.client.NewCreateBatchOrdersService().OrderList([]*CreateOrderService{{}, {}, {}}).Do(context.Background())
+	r := s.r()
+	r.NoError(err)
+
+	e := &CreateBatchOrdersResponse{
+		N: 3,
+		Orders: []*Order{
+			{
+				Symbol:                  "BTCUSDT",
+				OrderID:                 22542179,
+				ClientOrderID:           "testOrder",
+				Price:                   "100",
+				ReduceOnly:              false,
+				OrigQuantity:            "10",
+				ExecutedQuantity:        "0",
+				CumQuantity:             "0",
+				CumQuote:                "0",
+				Status:                  "NEW",
+				TimeInForce:             "GTC",
+				Type:                    "TRAILING_STOP_MARKET",
+				Side:                    "BUY",
+				StopPrice:               "9300",
+				Time:                    0,
+				UpdateTime:              1566818724722,
+				WorkingType:             "CONTRACT_PRICE",
+				ActivatePrice:           "9020",
+				PriceRate:               "0.3",
+				AvgPrice:                "0.00000",
+				OrigType:                "TRAILING_STOP_MARKET",
+				PositionSide:            "SHORT",
+				PriceProtect:            false,
+				ClosePosition:           false,
+				PriceMatch:              "NONE",
+				SelfTradePreventionMode: "NONE",
+				GoodTillDate:            0,
+			},
+		},
+		Errors: []error{
+			&common.APIError{
+				Code:    -2014,
+				Message: "API-key format invalid.",
+			},
+			nil,
+			&common.APIError{
+				Code:    -2022,
+				Message: "ReduceOnly Order is rejected.",
+			},
+		},
+	}
+	r.EqualValues(e, res)
 }

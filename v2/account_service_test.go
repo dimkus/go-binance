@@ -20,6 +20,12 @@ func (s *accountServiceTestSuite) TestGetAccount() {
 			"takerCommission": 15,
 			"buyerCommission": 0,
 			"sellerCommission": 0,
+			"commissionRates": {
+				"maker": "0.00150000",
+				"taker": "0.00150000",
+				"buyer": "0.00000000",
+				"seller": "0.00000000"
+			},
 			"canTrade": true,
 			"canWithdraw": true,
 			"canDeposit": true,
@@ -39,27 +45,39 @@ func (s *accountServiceTestSuite) TestGetAccount() {
 			],
 			"permissions": [
 				"SPOT"
-			]
+			],
+            "uid": 354937868
   }`)
 	s.mockDo(data, nil)
 	defer s.assertDo()
+
+	omitZeroBalances := true
+
 	s.assertReq(func(r *request) {
-		e := newSignedRequest()
+		e := newSignedRequest().setParams(params{
+			"omitZeroBalances": omitZeroBalances,
+		})
 		s.assertRequestEqual(e, r)
 	})
 
-	res, err := s.client.NewGetAccountService().Do(newContext())
+	res, err := s.client.NewGetAccountService().OmitZeroBalances(omitZeroBalances).Do(newContext())
 	s.r().NoError(err)
 	e := &Account{
 		MakerCommission:  15,
 		TakerCommission:  15,
 		BuyerCommission:  0,
 		SellerCommission: 0,
-		CanTrade:         true,
-		CanWithdraw:      true,
-		CanDeposit:       true,
-		UpdateTime:       123456789,
-		AccountType:      "SPOT",
+		CommissionRates: CommissionRates{
+			Maker:  "0.00150000",
+			Taker:  "0.00150000",
+			Buyer:  "0.00000000",
+			Seller: "0.00000000",
+		},
+		CanTrade:    true,
+		CanWithdraw: true,
+		CanDeposit:  true,
+		UpdateTime:  123456789,
+		AccountType: "SPOT",
 		Balances: []Balance{
 			{
 				Asset:  "BTC",
@@ -73,6 +91,7 @@ func (s *accountServiceTestSuite) TestGetAccount() {
 			},
 		},
 		Permissions: []string{"SPOT"},
+		UID:         354937868,
 	}
 	s.assertAccountEqual(e, res)
 }
@@ -83,6 +102,10 @@ func (s *accountServiceTestSuite) assertAccountEqual(e, a *Account) {
 	r.Equal(e.TakerCommission, a.TakerCommission, "TakerCommission")
 	r.Equal(e.BuyerCommission, a.BuyerCommission, "BuyerCommission")
 	r.Equal(e.SellerCommission, a.SellerCommission, "SellerCommission")
+	r.Equal(e.CommissionRates.Maker, a.CommissionRates.Maker, "CommissionRates.Maker")
+	r.Equal(e.CommissionRates.Taker, a.CommissionRates.Taker, "CommissionRates.Taker")
+	r.Equal(e.CommissionRates.Buyer, a.CommissionRates.Buyer, "CommissionRates.Buyer")
+	r.Equal(e.CommissionRates.Seller, a.CommissionRates.Seller, "CommissionRates.Seller")
 	r.Equal(e.CanTrade, a.CanTrade, "CanTrade")
 	r.Equal(e.CanWithdraw, a.CanWithdraw, "CanWithdraw")
 	r.Equal(e.CanDeposit, a.CanDeposit, "CanDeposit")
@@ -92,6 +115,7 @@ func (s *accountServiceTestSuite) assertAccountEqual(e, a *Account) {
 		r.Equal(e.Balances[i].Free, a.Balances[i].Free, "Free")
 		r.Equal(e.Balances[i].Locked, a.Balances[i].Locked, "Locked")
 	}
+	r.Equal(e.UID, a.UID, "UID")
 }
 
 func (s *accountServiceTestSuite) TestGetAccountSnapshot() {
