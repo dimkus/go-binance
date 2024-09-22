@@ -74,19 +74,19 @@ type IncomeHistoryAsyncDownload struct {
 }
 
 // IncomeHistoryAsyncDownload get position margin history service
-type GetIncomeHistoryAyncDownload struct {
+type GetIncomeHistoryAsyncDownload struct {
 	c          *Client
 	downloadId string
 }
 
 // DownloadId set downloadId
-func (s *GetIncomeHistoryAyncDownload) DownloadId(downloadId string) *GetIncomeHistoryAyncDownload {
+func (s *GetIncomeHistoryAsyncDownload) DownloadId(downloadId string) *GetIncomeHistoryAsyncDownload {
 	s.downloadId = downloadId
 	return s
 }
 
 // Do send request
-func (s *GetIncomeHistoryAyncDownload) Do(ctx context.Context, opts ...RequestOption) (res *IncomeHistoryAsyncDownload, err error) {
+func (s *GetIncomeHistoryAsyncDownload) Do(ctx context.Context, opts ...RequestOption) (res *IncomeHistoryAsyncDownload, err error) {
 	r := &request{
 		method:   http.MethodGet,
 		endpoint: "/fapi/v1/income/asyn/id",
