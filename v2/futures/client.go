@@ -710,13 +710,13 @@ func (c *Client) NewGlobalLongShortAccountRatioService() *GlobalLongShortAccount
 }
 
 // NewGetIncomeHistoryService init getting income history service
-func (c *Client) NewGetIncomeHistoryServiceAsyncDownloadId() *GetIncomeHistoryServiceAsyncDownloadId {
-	return &GetIncomeHistoryServiceAsyncDownloadId{c: c}
+func (c *Client) NewGetIncomeHistoryServiceAsyncDownloadId() *GetOrderHistoryServiceAsyncDownloadId {
+	return &GetOrderHistoryServiceAsyncDownloadId{c: c}
 }
 
 // NewGetIncomeHistoryService init getting income history service
-func (c *Client) NewGetIncomeHistoryServiceAsyncDownload() *GetIncomeHistoryAyncDownload {
-	return &GetIncomeHistoryAyncDownload{c: c}
+func (c *Client) NewGetIncomeHistoryServiceAsyncDownload() *GetOrderHistoryAsyncDownload {
+	return &GetOrderHistoryAsyncDownload{c: c}
 }
 
 // GetTradeHistoryServiceAsyncDownloadId init getting trade history service
@@ -727,4 +727,14 @@ func (c *Client) NewGetTradeHistoryServiceAsyncDownloadId() *GetTradeHistoryServ
 // GetTradeHistoryAyncDownload init getting trade history service
 func (c *Client) NewGetTradeHistoryServiceAsyncDownload() *GetTradeHistoryAsyncDownload {
 	return &GetTradeHistoryAsyncDownload{c: c}
+}
+
+// NewGetOrderHistoryServiceAsyncDownloadId init getting order history service
+func (c *Client) NewGetOrderHistoryServiceAsyncDownloadId() *GetOrderHistoryServiceAsyncDownloadId {
+	return &GetOrderHistoryServiceAsyncDownloadId{c: c}
+}
+
+// NewGetOrderHistoryAsyncDownload init getting order history service
+func (c *Client) NewGetOrderHistoryAsyncDownload() *GetOrderHistoryAsyncDownload {
+	return &GetOrderHistoryAsyncDownload{c: c}
 }
