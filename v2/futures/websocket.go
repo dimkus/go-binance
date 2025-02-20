@@ -1,6 +1,7 @@
 package futures
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -107,4 +108,90 @@ func keepAlive(c *websocket.Conn, timeout time.Duration) {
 			}
 		}
 	}()
+}
+
+func wsServeWithContext(ctx context.Context, cfg *WsConfig, handler WsHandler, errHandler ErrHandler) (err error) {
+	proxy := http.ProxyFromEnvironment
+	if cfg.Proxy != nil {
+		u, err := url.Parse(*cfg.Proxy)
+		if err != nil {
+			return err
+		}
+		proxy = http.ProxyURL(u)
+	}
+	dialer := websocket.Dialer{
+		Proxy:             proxy,
+		HandshakeTimeout:  45 * time.Second,
+		EnableCompression: false,
+	}
+
+	ctxToRun, ctxToRunCancel := context.WithCancel(ctx)
+
+	conn, _, err := dialer.DialContext(ctxToRun, cfg.Endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	conn.SetReadLimit(655350)
+
+	err = conn.SetReadDeadline(time.Now().Add(WebsocketTimeout))
+	if err != nil {
+		return err
+	}
+
+	go func(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn) {
+		defer cancel()
+
+		go func(ctx context.Context, conn *websocket.Conn) {
+			pingTicker := time.NewTicker(WebsocketTimeout)
+			defer pingTicker.Stop()
+
+			for {
+				select {
+				case <-ctxToRun.Done():
+					conn.Close()
+					return
+				case <-pingTicker.C:
+					if !WebsocketKeepalive {
+						continue
+					}
+
+					lastResponse := time.Now()
+					conn.SetPongHandler(func(msg string) error {
+						lastResponse = time.Now()
+						return nil
+					})
+
+					deadline := time.Now().Add(10 * time.Second)
+					err := conn.WriteControl(websocket.PingMessage, []byte{}, deadline)
+					if err != nil {
+						return
+					}
+
+					if time.Since(lastResponse) > WebsocketTimeout {
+						conn.Close()
+						return
+					}
+				}
+			}
+		}(ctx, conn)
+
+		for {
+			select {
+			case <-ctxToRun.Done():
+				errHandler(ctxToRun.Err())
+				return
+			default:
+				_, message, readMessageErr := conn.ReadMessage()
+				if readMessageErr != nil {
+					errHandler(readMessageErr)
+					return
+				}
+				handler(message)
+			}
+		}
+
+	}(ctxToRun, ctxToRunCancel, conn)
+
+	return nil
 }
