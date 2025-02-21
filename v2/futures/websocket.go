@@ -129,15 +129,15 @@ func wsServeWithContext(ctx context.Context, cfg *WsConfig, handler WsHandler, e
 
 	conn, _, err := dialer.DialContext(ctxToRun, cfg.Endpoint, nil)
 	if err != nil {
+		ctxToRunCancel()
 		return err
 	}
 
 	conn.SetReadLimit(655350)
 
-	err = conn.SetReadDeadline(time.Now().Add(WebsocketTimeout))
-	if err != nil {
-		return err
-	}
+	conn.SetPongHandler(func(string) error {
+		return conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	})
 
 	go func(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn) {
 		defer cancel()
@@ -148,7 +148,7 @@ func wsServeWithContext(ctx context.Context, cfg *WsConfig, handler WsHandler, e
 
 			for {
 				select {
-				case <-ctxToRun.Done():
+				case <-ctx.Done():
 					conn.Close()
 					return
 				case <-pingTicker.C:
@@ -163,8 +163,9 @@ func wsServeWithContext(ctx context.Context, cfg *WsConfig, handler WsHandler, e
 					})
 
 					deadline := time.Now().Add(10 * time.Second)
-					err := conn.WriteControl(websocket.PingMessage, []byte{}, deadline)
-					if err != nil {
+					pingErr := conn.WriteControl(websocket.PingMessage, []byte{}, deadline)
+					if pingErr != nil {
+						conn.Close()
 						return
 					}
 
@@ -178,8 +179,8 @@ func wsServeWithContext(ctx context.Context, cfg *WsConfig, handler WsHandler, e
 
 		for {
 			select {
-			case <-ctxToRun.Done():
-				errHandler(ctxToRun.Err())
+			case <-ctx.Done():
+				errHandler(ctx.Err())
 				return
 			default:
 				_, message, readMessageErr := conn.ReadMessage()
