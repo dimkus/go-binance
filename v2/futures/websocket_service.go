@@ -389,6 +389,44 @@ func WsCombinedKlineServe(symbolIntervalPair map[string]string, handler WsKlineH
 	return wsServe(cfg, wsHandler, errHandler)
 }
 
+// WsCombinedKlineServeWithContext is similar to WsCombinedKlineServe, but it uses the given context.Context to control the lifetime of the websocket connection.
+// It will serve websocket kline handler with multiple symbols with it interval.
+// Each symbol will be served in a separate goroutine.
+// The error returned is the first error encountered while establishing the websocket connection.
+func WsCombinedKlineServeWithContext(ctx context.Context, symbolIntervalPair map[string]string, handler WsKlineHandler, errHandler ErrHandler) (err error) {
+	endpoint := getCombinedEndpoint()
+	for symbol, interval := range symbolIntervalPair {
+		endpoint += fmt.Sprintf("%s@kline_%s", strings.ToLower(symbol), interval) + "/"
+	}
+	endpoint = endpoint[:len(endpoint)-1]
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		j, err := newJSON(message)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		stream := j.Get("stream").MustString()
+		data := j.Get("data").MustMap()
+
+		symbol := strings.Split(stream, "@")[0]
+
+		jsonData, _ := json.Marshal(data)
+
+		event := new(WsKlineEvent)
+		err = json.Unmarshal(jsonData, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		event.Symbol = strings.ToUpper(symbol)
+
+		handler(event)
+	}
+	return wsServeWithContext(ctx, cfg, wsHandler, errHandler)
+}
+
 // WsContinuousKlineEvent define websocket continuous kline event
 type WsContinuousKlineEvent struct {
 	Event        string            `json:"e"`
