@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -55,18 +57,46 @@ func getCombinedEndpoint() string {
 	return baseCombinedMainURL
 }
 
-// WsAggTradeEvent define websocket aggTrde event.
+// WsAggTradeEventMessage define websocket aggTrde event message. fieldalignment
+type WsAggTradeEventMessage struct {
+	Data   *WsAggTradeEvent `json:"data"`
+	Stream string           `json:"stream"`
+}
+
+// clear the fields of WsAggTradeEventMessage
+func (e *WsAggTradeEventMessage) clear() {
+	e.Stream = ""
+	if e.Data != nil {
+		e.Data.clear()
+	}
+}
+
+// WsAggTradeEvent define websocket aggTrde event. fieldalignment
 type WsAggTradeEvent struct {
-	Event            string `json:"e"`
-	Time             int64  `json:"E"`
 	Symbol           string `json:"s"`
-	AggregateTradeID int64  `json:"a"`
+	Event            string `json:"e"`
 	Price            string `json:"p"`
 	Quantity         string `json:"q"`
+	Time             int64  `json:"E"`
+	AggregateTradeID int64  `json:"a"`
 	FirstTradeID     int64  `json:"f"`
 	LastTradeID      int64  `json:"l"`
 	TradeTime        int64  `json:"T"`
 	Maker            bool   `json:"m"`
+}
+
+// clear the fields of WsAggTradeEvent
+func (e *WsAggTradeEvent) clear() {
+	e.Event = ""
+	e.Time = 0
+	e.Symbol = ""
+	e.AggregateTradeID = 0
+	e.Price = ""
+	e.Quantity = ""
+	e.FirstTradeID = 0
+	e.LastTradeID = 0
+	e.TradeTime = 0
+	e.Maker = false
 }
 
 // WsAggTradeHandler handle websocket that push trade information that is aggregated for a single taker order.
@@ -156,6 +186,47 @@ func WsCombinedAggTradeServeWithContext(ctx context.Context, symbols []string, h
 		handler(event)
 	}
 	return wsServeWithContext(ctx, cfg, wsHandler, errHandler)
+}
+
+var wsAggTradeEventMessageSyncPool = sync.Pool{
+	New: func() any {
+		return &WsAggTradeEventMessage{
+			Data: new(WsAggTradeEvent),
+		}
+	},
+}
+
+// WsCombinedAggTradeServeWithPoolContext is similar to WsAggTradeServe, but it handles multiple symbols
+// IMPORTANT: the WsAggTradeEvent pointer passed to WsAggTradeHandler is only valid during the callback execution.
+// To preserve data, you must copy it. You should not store the pointer itself.
+func WsCombinedAggTradeServeWithPoolContext(ctx context.Context, symbols []string, handler WsAggTradeHandler, errHandler ErrHandler) (err error) {
+	endpoint := getCombinedEndpoint()
+	for _, s := range symbols {
+		endpoint += fmt.Sprintf("%s@aggTrade", strings.ToLower(s)) + "/"
+	}
+	endpoint = endpoint[:len(endpoint)-1]
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		eventMessage := wsAggTradeEventMessageSyncPool.Get().(*WsAggTradeEventMessage)
+
+		err = jsoniter.Unmarshal(message, eventMessage)
+		if err != nil {
+			errHandler(err)
+
+			eventMessage.clear()
+			wsAggTradeEventMessageSyncPool.Put(eventMessage)
+			return
+		}
+
+		symbol := strings.Split(eventMessage.Stream, "@")[0]
+		eventMessage.Data.Symbol = strings.ToUpper(symbol)
+
+		handler(eventMessage.Data)
+
+		eventMessage.clear()
+		wsAggTradeEventMessageSyncPool.Put(eventMessage)
+	}
+	return wsServeWithPoolContext(ctx, cfg, wsHandler, errHandler)
 }
 
 // WsMarkPriceEvent define websocket markPriceUpdate event.

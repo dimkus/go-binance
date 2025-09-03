@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/dimkus/websocket"
 )
 
 // WsHandler handle raw websocket message

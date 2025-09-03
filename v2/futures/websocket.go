@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"github.com/dimkus/websocket"
 )
 
 // WsHandler handle raw websocket message
@@ -189,6 +189,94 @@ func wsServeWithContext(ctx context.Context, cfg *WsConfig, handler WsHandler, e
 					return
 				}
 				handler(message)
+			}
+		}
+
+	}(ctxToRun, ctxToRunCancel, conn)
+
+	return nil
+}
+
+func wsServeWithPoolContext(ctx context.Context, cfg *WsConfig, handler WsHandler, errHandler ErrHandler) (err error) {
+	proxy := http.ProxyFromEnvironment
+	if cfg.Proxy != nil {
+		u, err := url.Parse(*cfg.Proxy)
+		if err != nil {
+			return err
+		}
+		proxy = http.ProxyURL(u)
+	}
+	dialer := websocket.Dialer{
+		Proxy:             proxy,
+		HandshakeTimeout:  45 * time.Second,
+		EnableCompression: false,
+	}
+
+	ctxToRun, ctxToRunCancel := context.WithCancel(ctx)
+
+	conn, _, err := dialer.DialContext(ctxToRun, cfg.Endpoint, nil)
+	if err != nil {
+		ctxToRunCancel()
+		return err
+	}
+
+	conn.SetReadLimit(655350)
+
+	conn.SetPongHandler(func(string) error {
+		return conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	})
+
+	go func(ctx context.Context, cancel context.CancelFunc, conn *websocket.Conn) {
+		defer cancel()
+
+		go func(ctx context.Context, conn *websocket.Conn) {
+			pingTicker := time.NewTicker(WebsocketTimeout)
+			defer pingTicker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					conn.Close()
+					return
+				case <-pingTicker.C:
+					if !WebsocketKeepalive {
+						continue
+					}
+
+					lastResponse := time.Now()
+					conn.SetPongHandler(func(msg string) error {
+						lastResponse = time.Now()
+						return nil
+					})
+
+					deadline := time.Now().Add(10 * time.Second)
+					pingErr := conn.WriteControl(websocket.PingMessage, []byte{}, deadline)
+					if pingErr != nil {
+						conn.Close()
+						return
+					}
+
+					if time.Since(lastResponse) > WebsocketTimeout {
+						conn.Close()
+						return
+					}
+				}
+			}
+		}(ctx, conn)
+
+		for {
+			select {
+			case <-ctx.Done():
+				errHandler(ctx.Err())
+				return
+			default:
+				readMessageErr := conn.ReadMessageWithPool(func(messageType int, p []byte) {
+					handler(p)
+				})
+				if readMessageErr != nil {
+					errHandler(readMessageErr)
+					return
+				}
 			}
 		}
 
