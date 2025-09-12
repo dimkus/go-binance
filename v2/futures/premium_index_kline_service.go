@@ -9,11 +9,11 @@ import (
 // PremiumIndexKlinesService list klines
 type PremiumIndexKlinesService struct {
 	c         *Client
-	symbol    string
-	interval  string
 	limit     *int
 	startTime *int64
 	endTime   *int64
+	symbol    string
+	interval  string
 }
 
 // Symbol sets symbol

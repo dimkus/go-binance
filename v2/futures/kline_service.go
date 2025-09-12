@@ -9,11 +9,11 @@ import (
 // KlinesService list klines
 type KlinesService struct {
 	c         *Client
-	symbol    string
-	interval  string
 	limit     *int
 	startTime *int64
 	endTime   *int64
+	symbol    string
+	interval  string
 }
 
 // Symbol set symbol
@@ -148,15 +148,15 @@ func (s *KlinesService) DoMarketKlines(ctx context.Context, opts ...RequestOptio
 
 // Kline define kline info
 type Kline struct {
-	OpenTime                 int64  `json:"openTime"`
 	Open                     string `json:"open"`
 	High                     string `json:"high"`
 	Low                      string `json:"low"`
 	Close                    string `json:"close"`
 	Volume                   string `json:"volume"`
-	CloseTime                int64  `json:"closeTime"`
 	QuoteAssetVolume         string `json:"quoteAssetVolume"`
-	TradeNum                 int64  `json:"tradeNum"`
 	TakerBuyBaseAssetVolume  string `json:"takerBuyBaseAssetVolume"`
 	TakerBuyQuoteAssetVolume string `json:"takerBuyQuoteAssetVolume"`
+	OpenTime                 int64  `json:"openTime"`
+	CloseTime                int64  `json:"closeTime"`
+	TradeNum                 int64  `json:"tradeNum"`
 }

@@ -13,9 +13,9 @@ type IndexInfoService struct {
 
 type IndexInfo struct {
 	Symbol        string           `json:"symbol"`
-	Time          uint64           `json:"time"`
 	Component     string           `json:"component"`
 	BaseAssetList []*BaseAssetList `json:"baseAssetList"`
+	Time          uint64           `json:"time"`
 }
 
 type BaseAssetList struct {

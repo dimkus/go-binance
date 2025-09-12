@@ -19,15 +19,15 @@ type params map[string]interface{}
 
 // request define an API request
 type request struct {
-	method     string
-	endpoint   string
+	body       io.Reader
 	query      url.Values
 	form       url.Values
+	header     http.Header
+	method     string
+	endpoint   string
+	fullURL    string
 	recvWindow int64
 	secType    secType
-	header     http.Header
-	body       io.Reader
-	fullURL    string
 }
 
 // setParam set param with key/value to query string

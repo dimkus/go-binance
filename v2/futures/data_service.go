@@ -43,11 +43,11 @@ func (s *DeliveryPriceService) Do(ctx context.Context, opts ...RequestOption) (r
 
 type TakerLongShortRatioService struct {
 	c         *Client
-	symbol    string
-	period    string  // "5m","15m","30m","1h","2h","4h","6h","12h","1d"
-	limit     *uint32 // default 30, max 500
+	limit     *uint32
 	startTime *uint64
 	endTime   *uint64
+	symbol    string
+	period    string
 }
 
 type TakerLongShortRatio struct {
@@ -114,12 +114,12 @@ func (s *TakerLongShortRatioService) Do(ctx context.Context, opts ...RequestOpti
 
 type BasisService struct {
 	c            *Client
-	pair         string // for example, BTCUSDT
-	contractType string // CURRENT_QUARTER, NEXT_QUARTER, PERPETUAL
-	period       string // "5m","15m","30m","1h","2h","4h","6h","12h","1d"
-	limit        uint32 // default 30, max 500
 	startTime    *uint64
 	endTime      *uint64
+	pair         string
+	contractType string
+	period       string
+	limit        uint32
 }
 
 type Basis struct {

@@ -8,20 +8,20 @@ import (
 
 type LvtKlinesService struct {
 	c         *Client
-	symbol    string // for example, BTCDOWN
-	interval  string
 	startTime *uint64
 	endTime   *uint64
 	limit     *uint32
+	symbol    string
+	interval  string
 }
 
 type LvtKline struct {
-	OpenTime      uint64
 	Open          string
 	High          string
 	Low           string
 	Close         string
 	CloseLeverage string
+	OpenTime      uint64
 	CloseTime     uint64
 }
 

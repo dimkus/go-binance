@@ -10,8 +10,8 @@ import (
 // DepthService show depth info
 type DepthService struct {
 	c      *Client
-	symbol string
 	limit  *int
+	symbol string
 }
 
 // Symbol set symbol
@@ -71,11 +71,11 @@ func (s *DepthService) Do(ctx context.Context, opts ...RequestOption) (res *Dept
 
 // DepthResponse define depth info with bids and asks
 type DepthResponse struct {
+	Bids         []Bid `json:"bids"`
+	Asks         []Ask `json:"asks"`
 	LastUpdateID int64 `json:"lastUpdateId"`
 	Time         int64 `json:"E"`
 	TradeTime    int64 `json:"T"`
-	Bids         []Bid `json:"bids"`
-	Asks         []Ask `json:"asks"`
 }
 
 // Ask is a type alias for PriceLevel.

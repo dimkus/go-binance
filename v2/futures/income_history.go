@@ -9,12 +9,12 @@ import (
 // GetIncomeHistoryService get position margin history service
 type GetIncomeHistoryService struct {
 	c          *Client
-	symbol     string
-	incomeType string
 	startTime  *int64
 	endTime    *int64
 	limit      *int64
 	page       *int
+	symbol     string
+	incomeType string
 }
 
 // Symbol set symbol
@@ -96,7 +96,7 @@ type IncomeHistory struct {
 	IncomeType string `json:"incomeType"`
 	Info       string `json:"info"`
 	Symbol     string `json:"symbol"`
+	TradeID    string `json:"tradeId"`
 	Time       int64  `json:"time"`
 	TranID     int64  `json:"tranId"`
-	TradeID    string `json:"tradeId"`
 }

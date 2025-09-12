@@ -17,8 +17,8 @@ type ErrHandler func(err error)
 
 // WsConfig webservice configuration
 type WsConfig struct {
-	Endpoint string
 	Proxy    *string
+	Endpoint string
 }
 
 func newWsConfig(endpoint string) *WsConfig {

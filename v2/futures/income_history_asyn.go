@@ -9,8 +9,8 @@ import (
 
 // IncomeHistoryAyncDownloadId
 type IncomeHistoryAsyncDownloadId struct {
-	AvgCostTimestampOfLast30D int    `json:"avgCostTimestampOfLast30d"`
 	DownloadId                string `json:"downloadId"`
+	AvgCostTimestampOfLast30D int    `json:"avgCostTimestampOfLast30d"`
 }
 
 // IncomeHistoryAyncDownloadId get position margin history service
@@ -68,8 +68,8 @@ type IncomeHistoryAsyncDownload struct {
 	DownloadId          string `json:"downloadId"`
 	Status              string `json:"status"`
 	Url                 string `json:"url"`
-	Notified            bool   `json:"notified"`
 	ExpirationTimestamp int64  `json:"expirationTimestamp"`
+	Notified            bool   `json:"notified"`
 	IsExpired           bool   `json:"isExpired"`
 }
 

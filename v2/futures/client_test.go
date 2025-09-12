@@ -108,9 +108,9 @@ func newSignedRequest() *request {
 type assertReqFunc func(r *request)
 
 type mockedClient struct {
-	mock.Mock
 	*Client
 	assertReq assertReqFunc
+	mock.Mock
 }
 
 func newMockedClient(apiKey, secretKey string) *mockedClient {

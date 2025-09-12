@@ -208,23 +208,26 @@ func WsCombinedAggTradeServeWithPoolContext(ctx context.Context, symbols []strin
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		eventMessage := wsAggTradeEventMessageSyncPool.Get().(*WsAggTradeEventMessage)
+		eventMessage.clear()
+
+		defer wsAggTradeEventMessageSyncPool.Put(eventMessage)
 
 		err = jsoniter.Unmarshal(message, eventMessage)
 		if err != nil {
 			errHandler(err)
-
-			eventMessage.clear()
-			wsAggTradeEventMessageSyncPool.Put(eventMessage)
 			return
 		}
 
-		symbol := strings.Split(eventMessage.Stream, "@")[0]
+		var symbol string
+		if atIndex := strings.Index(eventMessage.Stream, "@"); atIndex != -1 {
+			symbol = eventMessage.Stream[:atIndex]
+		} else {
+			symbol = eventMessage.Stream
+		}
+
 		eventMessage.Data.Symbol = strings.ToUpper(symbol)
 
 		handler(eventMessage.Data)
-
-		eventMessage.clear()
-		wsAggTradeEventMessageSyncPool.Put(eventMessage)
 	}
 	return wsServeWithPoolContext(ctx, cfg, wsHandler, errHandler)
 }
@@ -232,12 +235,12 @@ func WsCombinedAggTradeServeWithPoolContext(ctx context.Context, symbols []strin
 // WsMarkPriceEvent define websocket markPriceUpdate event.
 type WsMarkPriceEvent struct {
 	Event                string `json:"e"`
-	Time                 int64  `json:"E"`
 	Symbol               string `json:"s"`
 	MarkPrice            string `json:"p"`
 	IndexPrice           string `json:"i"`
 	EstimatedSettlePrice string `json:"P"`
 	FundingRate          string `json:"r"`
+	Time                 int64  `json:"E"`
 	NextFundingTime      int64  `json:"T"`
 }
 
@@ -378,32 +381,93 @@ func WsAllMarkPriceServeWithRate(rate time.Duration, handler WsAllMarkPriceHandl
 	return wsAllMarkPriceServe(endpoint, handler, errHandler)
 }
 
+const (
+	// initialWsAllMarkPriceEventPoolCapacity is the initial capacity of wsAllMarkPriceEventSyncPool
+	initialWsAllMarkPriceEventPoolCapacity = 40
+	// maxWsAllMarkPriceEventPoolCapacity is the maximum capacity of wsAllMarkPriceEventSyncPool
+	// Don't put excessively large buffers back into the pool.
+	maxWsAllMarkPriceEventPoolCapacity = 2000
+)
+
+// wsAllMarkPriceEventSyncPool is a sync.Pool for WsAllMarkPriceEvent
+var wsAllMarkPriceEventSyncPool = sync.Pool{
+	New: func() any {
+		return make([]*WsMarkPriceEvent, 0, initialWsAllMarkPriceEventPoolCapacity)
+	},
+}
+
+// WsAllMarkPriceServeWithPoolContext serve websocket that pushes price and funding rate for all symbol and rate
+// use sync.Pool
+// IMPORTANT: the WsAllMarkPriceEvent pointer passed to closure is only valid during the callback execution.
+// To preserve data, you must copy it. You should not store the pointer itself.
+func WsAllMarkPriceServeWithPoolContext(ctx context.Context, rate time.Duration, handler WsAllMarkPriceHandler, errHandler ErrHandler) error {
+	var rateStr string
+	switch rate {
+	case 3 * time.Second:
+		rateStr = ""
+	case 1 * time.Second:
+		rateStr = "@1s"
+	default:
+		return errors.New("Invalid rate")
+	}
+
+	endpoint := fmt.Sprintf("%s/!markPrice@arr%s", getWsEndpoint(), rateStr)
+
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		events := wsAllMarkPriceEventSyncPool.Get().([]*WsMarkPriceEvent)
+
+		// clear old events
+		if len(events) != 0 {
+			events = events[:0]
+		}
+
+		defer func() {
+			// Don't put excessively large buffers back into the pool.
+			if cap(events) <= maxWsAllMarkPriceEventPoolCapacity {
+				for i := range events {
+					events[i] = nil
+				}
+				wsAllMarkPriceEventSyncPool.Put(events)
+			}
+		}()
+
+		err := jsoniter.Unmarshal(message, &events)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+		handler(events)
+	}
+	return wsServeWithPoolContext(ctx, cfg, wsHandler, errHandler)
+}
+
 // WsKlineEvent define websocket kline event
 type WsKlineEvent struct {
 	Event  string  `json:"e"`
-	Time   int64   `json:"E"`
 	Symbol string  `json:"s"`
 	Kline  WsKline `json:"k"`
+	Time   int64   `json:"E"`
 }
 
 // WsKline define websocket kline
 type WsKline struct {
-	StartTime            int64  `json:"t"`
-	EndTime              int64  `json:"T"`
+	Volume               string `json:"v"`
+	ActiveBuyQuoteVolume string `json:"Q"`
 	Symbol               string `json:"s"`
 	Interval             string `json:"i"`
-	FirstTradeID         int64  `json:"f"`
-	LastTradeID          int64  `json:"L"`
+	ActiveBuyVolume      string `json:"V"`
+	QuoteVolume          string `json:"q"`
 	Open                 string `json:"o"`
 	Close                string `json:"c"`
 	High                 string `json:"h"`
 	Low                  string `json:"l"`
-	Volume               string `json:"v"`
+	FirstTradeID         int64  `json:"f"`
 	TradeNum             int64  `json:"n"`
+	LastTradeID          int64  `json:"L"`
+	StartTime            int64  `json:"t"`
+	EndTime              int64  `json:"T"`
 	IsFinal              bool   `json:"x"`
-	QuoteVolume          string `json:"q"`
-	ActiveBuyVolume      string `json:"V"`
-	ActiveBuyQuoteVolume string `json:"Q"`
 }
 
 // WsKlineHandler handle websocket kline event
@@ -501,29 +565,29 @@ func WsCombinedKlineServeWithContext(ctx context.Context, symbolIntervalPair map
 // WsContinuousKlineEvent define websocket continuous kline event
 type WsContinuousKlineEvent struct {
 	Event        string            `json:"e"`
-	Time         int64             `json:"E"`
 	PairSymbol   string            `json:"ps"`
 	ContractType string            `json:"ct"`
 	Kline        WsContinuousKline `json:"k"`
+	Time         int64             `json:"E"`
 }
 
 // WsContinuousKline define websocket continuous kline
 type WsContinuousKline struct {
-	StartTime            int64  `json:"t"`
-	EndTime              int64  `json:"T"`
-	Interval             string `json:"i"`
-	FirstTradeID         int64  `json:"f"`
-	LastTradeID          int64  `json:"L"`
-	Open                 string `json:"o"`
-	Close                string `json:"c"`
-	High                 string `json:"h"`
-	Low                  string `json:"l"`
 	Volume               string `json:"v"`
-	TradeNum             int64  `json:"n"`
-	IsFinal              bool   `json:"x"`
-	QuoteVolume          string `json:"q"`
-	ActiveBuyVolume      string `json:"V"`
+	High                 string `json:"h"`
+	Interval             string `json:"i"`
 	ActiveBuyQuoteVolume string `json:"Q"`
+	Low                  string `json:"l"`
+	Open                 string `json:"o"`
+	ActiveBuyVolume      string `json:"V"`
+	QuoteVolume          string `json:"q"`
+	Close                string `json:"c"`
+	LastTradeID          int64  `json:"L"`
+	StartTime            int64  `json:"t"`
+	TradeNum             int64  `json:"n"`
+	EndTime              int64  `json:"T"`
+	FirstTradeID         int64  `json:"f"`
+	IsFinal              bool   `json:"x"`
 }
 
 // WsContinuousKlineSubscribeArgs used with WsContinuousKlineServe or WsCombinedContinuousKlineServe
@@ -590,7 +654,6 @@ func WsCombinedContinuousKlineServe(subscribeArgsList []*WsContinuousKlineSubscr
 // WsMiniMarketTickerEvent define websocket mini market ticker event.
 type WsMiniMarketTickerEvent struct {
 	Event       string `json:"e"`
-	Time        int64  `json:"E"`
 	Symbol      string `json:"s"`
 	ClosePrice  string `json:"c"`
 	OpenPrice   string `json:"o"`
@@ -598,6 +661,7 @@ type WsMiniMarketTickerEvent struct {
 	LowPrice    string `json:"l"`
 	Volume      string `json:"v"`
 	QuoteVolume string `json:"q"`
+	Time        int64  `json:"E"`
 }
 
 // WsMiniMarketTickerHandler handle websocket that pushes 24hr rolling window mini-ticker statistics for a single symbol.
@@ -643,19 +707,19 @@ func WsAllMiniMarketTickerServe(handler WsAllMiniMarketTickerHandler, errHandler
 
 // WsMarketTickerEvent define websocket market ticker event.
 type WsMarketTickerEvent struct {
-	Event              string `json:"e"`
-	Time               int64  `json:"E"`
+	OpenPrice          string `json:"o"`
+	LowPrice           string `json:"l"`
 	Symbol             string `json:"s"`
 	PriceChange        string `json:"p"`
 	PriceChangePercent string `json:"P"`
 	WeightedAvgPrice   string `json:"w"`
 	ClosePrice         string `json:"c"`
 	CloseQty           string `json:"Q"`
-	OpenPrice          string `json:"o"`
-	HighPrice          string `json:"h"`
-	LowPrice           string `json:"l"`
-	BaseVolume         string `json:"v"`
 	QuoteVolume        string `json:"q"`
+	Event              string `json:"e"`
+	HighPrice          string `json:"h"`
+	BaseVolume         string `json:"v"`
+	Time               int64  `json:"E"`
 	OpenTime           int64  `json:"O"`
 	CloseTime          int64  `json:"C"`
 	FirstID            int64  `json:"F"`
@@ -704,17 +768,30 @@ func WsAllMarketTickerServe(handler WsAllMarketTickerHandler, errHandler ErrHand
 	return wsServe(cfg, wsHandler, errHandler)
 }
 
-// WsBookTickerEvent define websocket best book ticker event.
+// WsBookTickerEvent define websocket best book ticker event. fieldalignment
 type WsBookTickerEvent struct {
 	Event           string `json:"e"`
-	UpdateID        int64  `json:"u"`
-	Time            int64  `json:"E"`
-	TransactionTime int64  `json:"T"`
 	Symbol          string `json:"s"`
 	BestBidPrice    string `json:"b"`
 	BestBidQty      string `json:"B"`
 	BestAskPrice    string `json:"a"`
 	BestAskQty      string `json:"A"`
+	UpdateID        int64  `json:"u"`
+	Time            int64  `json:"E"`
+	TransactionTime int64  `json:"T"`
+}
+
+// clear the fields of WsBookTickerEvent
+func (e *WsBookTickerEvent) clear() {
+	e.Event = ""
+	e.Symbol = ""
+	e.BestBidPrice = ""
+	e.BestBidQty = ""
+	e.BestAskPrice = ""
+	e.BestAskQty = ""
+	e.UpdateID = 0
+	e.Time = 0
+	e.TransactionTime = 0
 }
 
 // WsBookTickerHandler handle websocket that pushes updates to the best bid or ask price or quantity in real-time for a specified symbol.
@@ -773,11 +850,46 @@ func WsCombinedBookTickerServe(symbols []string, handler WsBookTickerHandler, er
 	return wsServe(cfg, wsHandler, errHandler)
 }
 
+// wsBookTickerEventSyncPool is a sync.Pool for WsBookTickerEvent
+var wsBookTickerEventSyncPool = sync.Pool{
+	New: func() any {
+		return &WsBookTickerEvent{}
+	},
+}
+
+// WsCombinedBookTickerServeWithPoolContext uses the same "@bookTicker" endpoint as WsCombinedBookTickerServe, but uses a sync.Pool to reduce allocations
+//
+// IMPORTANT: the WsBookTickerEvent pointer passed to WsBookTickerHandler is only valid during the callback execution.
+// To preserve data, you must copy it. You should not store the pointer itself.
+func WsCombinedBookTickerServeWithPoolContext(ctx context.Context, symbols []string, handler WsBookTickerHandler, errHandler ErrHandler) (err error) {
+	endpoint := fmt.Sprintf("%s/", getWsEndpoint())
+	for _, s := range symbols {
+		endpoint += fmt.Sprintf("%s@bookTicker", strings.ToLower(s)) + "/"
+	}
+
+	endpoint = endpoint[:len(endpoint)-1]
+	cfg := newWsConfig(endpoint)
+	wsHandler := func(message []byte) {
+		event := wsBookTickerEventSyncPool.Get().(*WsBookTickerEvent)
+		event.clear()
+
+		defer wsBookTickerEventSyncPool.Put(event)
+		err = jsoniter.Unmarshal(message, event)
+		if err != nil {
+			errHandler(err)
+			return
+		}
+
+		handler(event)
+	}
+	return wsServeWithPoolContext(ctx, cfg, wsHandler, errHandler)
+}
+
 // WsLiquidationOrderEvent define websocket liquidation order event.
 type WsLiquidationOrderEvent struct {
 	Event            string             `json:"e"`
-	Time             int64              `json:"E"`
 	LiquidationOrder WsLiquidationOrder `json:"o"`
+	Time             int64              `json:"E"`
 }
 
 // WsLiquidationOrder define websocket liquidation order.
@@ -833,14 +945,14 @@ func WsAllLiquidationOrderServe(handler WsLiquidationOrderHandler, errHandler Er
 // WsDepthEvent define websocket depth book event
 type WsDepthEvent struct {
 	Event            string `json:"e"`
+	Symbol           string `json:"s"`
+	Bids             []Bid  `json:"b"`
+	Asks             []Ask  `json:"a"`
 	Time             int64  `json:"E"`
 	TransactionTime  int64  `json:"T"`
-	Symbol           string `json:"s"`
 	FirstUpdateID    int64  `json:"U"`
 	LastUpdateID     int64  `json:"u"`
 	PrevLastUpdateID int64  `json:"pu"`
-	Bids             []Bid  `json:"b"`
-	Asks             []Ask  `json:"a"`
 }
 
 // WsDepthHandler handle websocket depth event
@@ -1022,10 +1134,10 @@ func wsDepthServe(symbol string, levels string, rate *time.Duration, handler WsD
 // WsBLVTInfoEvent define websocket BLVT info event
 type WsBLVTInfoEvent struct {
 	Event          string         `json:"e"`
-	Time           int64          `json:"E"`
 	Symbol         string         `json:"s"`
-	Issued         float64        `json:"m"`
 	Baskets        []WsBLVTBasket `json:"b"`
+	Time           int64          `json:"E"`
+	Issued         float64        `json:"m"`
 	Nav            float64        `json:"n"`
 	Leverage       float64        `json:"l"`
 	TargetLeverage int64          `json:"t"`
@@ -1060,24 +1172,24 @@ func WsBLVTInfoServe(name string, handler WsBLVTInfoHandler, errHandler ErrHandl
 // WsBLVTKlineEvent define BLVT kline event
 type WsBLVTKlineEvent struct {
 	Event  string      `json:"e"`
-	Time   int64       `json:"E"`
 	Symbol string      `json:"s"`
 	Kline  WsBLVTKline `json:"k"`
+	Time   int64       `json:"E"`
 }
 
 // WsBLVTKline BLVT kline
 type WsBLVTKline struct {
-	StartTime       int64  `json:"t"`
-	CloseTime       int64  `json:"T"`
 	Symbol          string `json:"s"`
 	Interval        string `json:"i"`
-	FirstUpdateTime int64  `json:"f"`
-	LastUpdateTime  int64  `json:"L"`
 	OpenPrice       string `json:"o"`
 	ClosePrice      string `json:"c"`
 	HighPrice       string `json:"h"`
 	LowPrice        string `json:"l"`
 	Leverage        string `json:"v"`
+	StartTime       int64  `json:"t"`
+	CloseTime       int64  `json:"T"`
+	FirstUpdateTime int64  `json:"f"`
+	LastUpdateTime  int64  `json:"L"`
 	Count           int64  `json:"n"`
 }
 
@@ -1103,10 +1215,10 @@ func WsBLVTKlineServe(name string, interval string, handler WsBLVTKlineHandler, 
 // WsCompositeIndexEvent websocket composite index event
 type WsCompositeIndexEvent struct {
 	Event       string          `json:"e"`
-	Time        int64           `json:"E"`
 	Symbol      string          `json:"s"`
 	Price       string          `json:"p"`
 	Composition []WsComposition `json:"c"`
+	Time        int64           `json:"E"`
 }
 
 // WsComposition websocket composite index event composition
@@ -1138,25 +1250,25 @@ func WsCompositiveIndexServe(symbol string, handler WsCompositeIndexHandler, err
 // WsUserDataEvent define user data event
 type WsUserDataEvent struct {
 	Event               UserDataEventType     `json:"e"`
-	Time                int64                 `json:"E"`
 	CrossWalletBalance  string                `json:"cw"`
-	MarginCallPositions []WsPosition          `json:"p"`
-	TransactionTime     int64                 `json:"T"`
 	AccountUpdate       WsAccountUpdate       `json:"a"`
-	OrderTradeUpdate    WsOrderTradeUpdate    `json:"o"`
+	MarginCallPositions []WsPosition          `json:"p"`
 	AccountConfigUpdate WsAccountConfigUpdate `json:"ac"`
+	OrderTradeUpdate    WsOrderTradeUpdate    `json:"o"`
+	Time                int64                 `json:"E"`
+	TransactionTime     int64                 `json:"T"`
 }
 
 func (e *WsUserDataEvent) UnmarshalJSON(data []byte) error {
 	var tmp struct {
-		Event               UserDataEventType     `json:"e"`
 		Time                interface{}           `json:"E"`
+		Event               UserDataEventType     `json:"e"`
 		CrossWalletBalance  string                `json:"cw"`
-		MarginCallPositions []WsPosition          `json:"p"`
-		TransactionTime     int64                 `json:"T"`
 		AccountUpdate       WsAccountUpdate       `json:"a"`
-		OrderTradeUpdate    WsOrderTradeUpdate    `json:"o"`
+		MarginCallPositions []WsPosition          `json:"p"`
 		AccountConfigUpdate WsAccountConfigUpdate `json:"ac"`
+		OrderTradeUpdate    WsOrderTradeUpdate    `json:"o"`
+		TransactionTime     int64                 `json:"T"`
 	}
 
 	if err := json.Unmarshal(data, &tmp); err != nil {
@@ -1216,40 +1328,40 @@ type WsPosition struct {
 
 // WsOrderTradeUpdate define order trade update
 type WsOrderTradeUpdate struct {
-	Symbol               string             `json:"s"`   // Symbol
-	ClientOrderID        string             `json:"c"`   // Client order ID
-	Side                 SideType           `json:"S"`   // Side
-	Type                 OrderType          `json:"o"`   // Order type
-	TimeInForce          TimeInForceType    `json:"f"`   // Time in force
-	OriginalQty          string             `json:"q"`   // Original quantity
-	OriginalPrice        string             `json:"p"`   // Original price
-	AveragePrice         string             `json:"ap"`  // Average price
-	StopPrice            string             `json:"sp"`  // Stop price. Please ignore with TRAILING_STOP_MARKET order
-	ExecutionType        OrderExecutionType `json:"x"`   // Execution type
-	Status               OrderStatusType    `json:"X"`   // Order status
-	ID                   int64              `json:"i"`   // Order ID
-	LastFilledQty        string             `json:"l"`   // Order Last Filled Quantity
-	AccumulatedFilledQty string             `json:"z"`   // Order Filled Accumulated Quantity
-	LastFilledPrice      string             `json:"L"`   // Last Filled Price
-	CommissionAsset      string             `json:"N"`   // Commission Asset, will not push if no commission
-	Commission           string             `json:"n"`   // Commission, will not push if no commission
-	TradeTime            int64              `json:"T"`   // Order Trade Time
-	TradeID              int64              `json:"t"`   // Trade ID
-	BidsNotional         string             `json:"b"`   // Bids Notional
-	AsksNotional         string             `json:"a"`   // Asks Notional
-	IsMaker              bool               `json:"m"`   // Is this trade the maker side?
-	IsReduceOnly         bool               `json:"R"`   // Is this reduce only
-	WorkingType          WorkingType        `json:"wt"`  // Stop Price Working Type
-	OriginalType         OrderType          `json:"ot"`  // Original Order Type
-	PositionSide         PositionSideType   `json:"ps"`  // Position Side
-	IsClosingPosition    bool               `json:"cp"`  // If Close-All, pushed with conditional order
-	ActivationPrice      string             `json:"AP"`  // Activation Price, only puhed with TRAILING_STOP_MARKET order
-	CallbackRate         string             `json:"cr"`  // Callback Rate, only puhed with TRAILING_STOP_MARKET order
-	PriceProtect         bool               `json:"pP"`  // If price protection is turned on
-	RealizedPnL          string             `json:"rp"`  // Realized Profit of the trade
-	STP                  string             `json:"V"`   // STP mode
-	PriceMode            string             `json:"pm"`  // Price match mode
-	GTD                  int64              `json:"gtd"` // TIF GTD order auto cancel time
+	Commission           string             `json:"n"`
+	PositionSide         PositionSideType   `json:"ps"`
+	Side                 SideType           `json:"S"`
+	Type                 OrderType          `json:"o"`
+	TimeInForce          TimeInForceType    `json:"f"`
+	OriginalQty          string             `json:"q"`
+	OriginalPrice        string             `json:"p"`
+	AveragePrice         string             `json:"ap"`
+	StopPrice            string             `json:"sp"`
+	ExecutionType        OrderExecutionType `json:"x"`
+	PriceMode            string             `json:"pm"`
+	STP                  string             `json:"V"`
+	LastFilledQty        string             `json:"l"`
+	AccumulatedFilledQty string             `json:"z"`
+	LastFilledPrice      string             `json:"L"`
+	CommissionAsset      string             `json:"N"`
+	ClientOrderID        string             `json:"c"`
+	RealizedPnL          string             `json:"rp"`
+	Status               OrderStatusType    `json:"X"`
+	BidsNotional         string             `json:"b"`
+	AsksNotional         string             `json:"a"`
+	CallbackRate         string             `json:"cr"`
+	ActivationPrice      string             `json:"AP"`
+	WorkingType          WorkingType        `json:"wt"`
+	OriginalType         OrderType          `json:"ot"`
+	Symbol               string             `json:"s"`
+	TradeTime            int64              `json:"T"`
+	ID                   int64              `json:"i"`
+	TradeID              int64              `json:"t"`
+	GTD                  int64              `json:"gtd"`
+	IsClosingPosition    bool               `json:"cp"`
+	IsReduceOnly         bool               `json:"R"`
+	IsMaker              bool               `json:"m"`
+	PriceProtect         bool               `json:"pP"`
 }
 
 // WsAccountConfigUpdate define account config update

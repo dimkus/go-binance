@@ -13,7 +13,6 @@ type AssetIndexService struct {
 
 type AssetIndex struct {
 	Symbol                string `json:"symbol"`
-	Time                  uint64 `json:"time"`
 	Index                 string `json:"index"`
 	BidBuffer             string `json:"bidBuffer"`
 	AskBuffer             string `json:"askBuffer"`
@@ -23,6 +22,7 @@ type AssetIndex struct {
 	AutoExchangeAskBuffer string `json:"autoExchangeAskBuffer"`
 	AutoExchangeBidRate   string `json:"autoExchangeBidRate"`
 	AutoExchangeAskRate   string `json:"autoExchangeAskRate"`
+	Time                  uint64 `json:"time"`
 }
 
 func (s *AssetIndexService) Symbol(symbol string) *AssetIndexService {

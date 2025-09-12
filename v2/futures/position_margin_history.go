@@ -9,11 +9,11 @@ import (
 // GetPositionMarginHistoryService get position margin history service
 type GetPositionMarginHistoryService struct {
 	c         *Client
-	symbol    string
 	_type     *int
 	startTime *int64
 	endTime   *int64
 	limit     *int64
+	symbol    string
 }
 
 // Symbol set symbol
@@ -84,7 +84,7 @@ type PositionMarginHistory struct {
 	Amount       string `json:"amount"`
 	Asset        string `json:"asset"`
 	Symbol       string `json:"symbol"`
+	PositionSide string `json:"positionSide"`
 	Time         int64  `json:"time"`
 	Type         int    `json:"type"`
-	PositionSide string `json:"positionSide"`
 }

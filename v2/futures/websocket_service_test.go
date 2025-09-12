@@ -11,9 +11,9 @@ import (
 )
 
 type websocketServiceTestSuite struct {
-	baseTestSuite
 	origWsServe func(*WsConfig, WsHandler, ErrHandler) (chan struct{}, chan struct{}, error)
-	serveCount  int
+	baseTestSuite
+	serveCount int
 }
 
 func TestWebsocketService(t *testing.T) {

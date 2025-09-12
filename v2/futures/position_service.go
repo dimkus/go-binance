@@ -50,9 +50,9 @@ func (s *ChangeLeverageService) Do(ctx context.Context, opts ...RequestOption) (
 
 // SymbolLeverage define leverage info of symbol
 type SymbolLeverage struct {
-	Leverage         int    `json:"leverage"`
 	MaxNotionalValue string `json:"maxNotionalValue"`
 	Symbol           string `json:"symbol"`
+	Leverage         int    `json:"leverage"`
 }
 
 // ChangeMarginTypeService change user's margin type of specific symbol market

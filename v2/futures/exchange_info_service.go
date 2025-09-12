@@ -36,10 +36,10 @@ func (s *ExchangeInfoService) Do(ctx context.Context, opts ...RequestOption) (re
 // ExchangeInfo exchange info
 type ExchangeInfo struct {
 	Timezone        string        `json:"timezone"`
-	ServerTime      int64         `json:"serverTime"`
 	RateLimits      []RateLimit   `json:"rateLimits"`
 	ExchangeFilters []interface{} `json:"exchangeFilters"`
 	Symbols         []Symbol      `json:"symbols"`
+	ServerTime      int64         `json:"serverTime"`
 }
 
 // RateLimit struct
@@ -52,30 +52,30 @@ type RateLimit struct {
 
 // Symbol market symbol
 type Symbol struct {
-	Symbol                string                   `json:"symbol"`
-	Pair                  string                   `json:"pair"`
-	ContractType          ContractType             `json:"contractType"`
-	DeliveryDate          int64                    `json:"deliveryDate"`
-	OnboardDate           int64                    `json:"onboardDate"`
-	Status                string                   `json:"status"`
-	MaintMarginPercent    string                   `json:"maintMarginPercent"`
-	RequiredMarginPercent string                   `json:"requiredMarginPercent"`
-	PricePrecision        int                      `json:"pricePrecision"`
-	QuantityPrecision     int                      `json:"quantityPrecision"`
-	BaseAssetPrecision    int                      `json:"baseAssetPrecision"`
-	QuotePrecision        int                      `json:"quotePrecision"`
 	UnderlyingType        string                   `json:"underlyingType"`
-	UnderlyingSubType     []string                 `json:"underlyingSubType"`
-	SettlePlan            int64                    `json:"settlePlan"`
+	Symbol                string                   `json:"symbol"`
+	ContractType          ContractType             `json:"contractType"`
+	MarketTakeBound       string                   `json:"marketTakeBound"`
+	LiquidationFee        string                   `json:"liquidationFee"`
+	Status                string                   `json:"status"`
+	BaseAsset             string                   `json:"baseAsset"`
+	RequiredMarginPercent string                   `json:"requiredMarginPercent"`
+	MarginAsset           string                   `json:"marginAsset"`
+	QuoteAsset            string                   `json:"quoteAsset"`
+	Pair                  string                   `json:"pair"`
+	MaintMarginPercent    string                   `json:"maintMarginPercent"`
 	TriggerProtect        string                   `json:"triggerProtect"`
+	UnderlyingSubType     []string                 `json:"underlyingSubType"`
 	OrderType             []OrderType              `json:"orderType"`
 	TimeInForce           []TimeInForceType        `json:"timeInForce"`
 	Filters               []map[string]interface{} `json:"filters"`
-	QuoteAsset            string                   `json:"quoteAsset"`
-	MarginAsset           string                   `json:"marginAsset"`
-	BaseAsset             string                   `json:"baseAsset"`
-	LiquidationFee        string                   `json:"liquidationFee"`
-	MarketTakeBound       string                   `json:"marketTakeBound"`
+	SettlePlan            int64                    `json:"settlePlan"`
+	BaseAssetPrecision    int                      `json:"baseAssetPrecision"`
+	QuantityPrecision     int                      `json:"quantityPrecision"`
+	PricePrecision        int                      `json:"pricePrecision"`
+	QuotePrecision        int                      `json:"quotePrecision"`
+	OnboardDate           int64                    `json:"onboardDate"`
+	DeliveryDate          int64                    `json:"deliveryDate"`
 }
 
 // LotSizeFilter define lot size filter of symbol

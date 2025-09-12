@@ -9,11 +9,11 @@ import (
 // IndexPriceKlinesService list klines
 type IndexPriceKlinesService struct {
 	c         *Client
-	pair      string
-	interval  string
 	limit     *int
 	startTime *int64
 	endTime   *int64
+	pair      string
+	interval  string
 }
 
 // Pair sets pair

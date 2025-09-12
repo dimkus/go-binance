@@ -7,10 +7,10 @@ import (
 
 func TestWithExtraForm(t *testing.T) {
 	tests := []struct {
-		name        string
 		r           *request
 		m           map[string]any
 		wantRequest *request
+		name        string
 	}{
 		{
 			name: "place order use extra priceMatch and goodTillDate",

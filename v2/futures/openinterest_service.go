@@ -48,11 +48,11 @@ type OpenInterest struct {
 // OpenInterestStatisticsService list open history data of a symbol.
 type OpenInterestStatisticsService struct {
 	c         *Client
-	symbol    string
-	period    string
 	limit     *int
 	startTime *int64
 	endTime   *int64
+	symbol    string
+	period    string
 }
 
 // Symbol set symbol

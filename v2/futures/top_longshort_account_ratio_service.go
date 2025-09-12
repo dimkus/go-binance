@@ -9,11 +9,11 @@ import (
 // TopLongShortAccountRatioService list open history data of a symbol.
 type TopLongShortAccountRatioService struct {
 	c         *Client
-	symbol    string
-	period    string
 	limit     *int
 	startTime *int64
 	endTime   *int64
+	symbol    string
+	period    string
 }
 
 // Symbol set symbol

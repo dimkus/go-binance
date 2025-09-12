@@ -9,9 +9,9 @@ import (
 // HistoricalTradesService trades
 type HistoricalTradesService struct {
 	c      *Client
-	symbol string
 	limit  *int
 	fromID *int64
+	symbol string
 }
 
 // Symbol set symbol
@@ -61,24 +61,24 @@ func (s *HistoricalTradesService) Do(ctx context.Context, opts ...RequestOption)
 
 // Trade define trade info
 type Trade struct {
-	ID            int64  `json:"id"`
 	Price         string `json:"price"`
 	Quantity      string `json:"qty"`
 	QuoteQuantity string `json:"quoteQty"`
+	ID            int64  `json:"id"`
 	Time          int64  `json:"time"`
 	IsBuyerMaker  bool   `json:"isBuyerMaker"`
 }
 
 // TradeV3 define v3 trade info
 type TradeV3 struct {
-	ID              int64  `json:"id"`
 	Symbol          string `json:"symbol"`
-	OrderID         int64  `json:"orderId"`
 	Price           string `json:"price"`
 	Quantity        string `json:"qty"`
 	QuoteQuantity   string `json:"quoteQty"`
 	Commission      string `json:"commission"`
 	CommissionAsset string `json:"commissionAsset"`
+	ID              int64  `json:"id"`
+	OrderID         int64  `json:"orderId"`
 	Time            int64  `json:"time"`
 	IsBuyer         bool   `json:"isBuyer"`
 	IsMaker         bool   `json:"isMaker"`
@@ -88,11 +88,11 @@ type TradeV3 struct {
 // AggTradesService list aggregate trades
 type AggTradesService struct {
 	c         *Client
-	symbol    string
 	fromID    *int64
 	startTime *int64
 	endTime   *int64
 	limit     *int
+	symbol    string
 }
 
 // Symbol set symbol
@@ -158,9 +158,9 @@ func (s *AggTradesService) Do(ctx context.Context, opts ...RequestOption) (res [
 
 // AggTrade define aggregate trade info
 type AggTrade struct {
-	AggTradeID   int64  `json:"a"`
 	Price        string `json:"p"`
 	Quantity     string `json:"q"`
+	AggTradeID   int64  `json:"a"`
 	FirstTradeID int64  `json:"f"`
 	LastTradeID  int64  `json:"l"`
 	Timestamp    int64  `json:"T"`
@@ -170,8 +170,8 @@ type AggTrade struct {
 // RecentTradesService list recent trades
 type RecentTradesService struct {
 	c      *Client
-	symbol string
 	limit  *int
+	symbol string
 }
 
 // Symbol set symbol
@@ -211,12 +211,12 @@ func (s *RecentTradesService) Do(ctx context.Context, opts ...RequestOption) (re
 // ListAccountTradeService define account trade list service
 type ListAccountTradeService struct {
 	c         *Client
-	symbol    string
 	orderId   *int64
 	startTime *int64
 	endTime   *int64
 	fromID    *int64
 	limit     *int
+	symbol    string
 }
 
 // Symbol set symbol
@@ -292,18 +292,18 @@ func (s *ListAccountTradeService) Do(ctx context.Context, opts ...RequestOption)
 
 // AccountTrade define account trade
 type AccountTrade struct {
-	Buyer           bool             `json:"buyer"`
-	Commission      string           `json:"commission"`
-	CommissionAsset string           `json:"commissionAsset"`
-	ID              int64            `json:"id"`
-	Maker           bool             `json:"maker"`
-	OrderID         int64            `json:"orderId"`
-	Price           string           `json:"price"`
-	Quantity        string           `json:"qty"`
-	QuoteQuantity   string           `json:"quoteQty"`
 	RealizedPnl     string           `json:"realizedPnl"`
 	Side            SideType         `json:"side"`
+	CommissionAsset string           `json:"commissionAsset"`
+	Quantity        string           `json:"qty"`
 	PositionSide    PositionSideType `json:"positionSide"`
+	Price           string           `json:"price"`
+	QuoteQuantity   string           `json:"quoteQty"`
 	Symbol          string           `json:"symbol"`
+	Commission      string           `json:"commission"`
+	OrderID         int64            `json:"orderId"`
+	ID              int64            `json:"id"`
 	Time            int64            `json:"time"`
+	Buyer           bool             `json:"buyer"`
+	Maker           bool             `json:"maker"`
 }

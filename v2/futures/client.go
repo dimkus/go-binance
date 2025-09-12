@@ -6,11 +6,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -250,18 +251,18 @@ func NewProxiedClient(apiKey, secretKey, proxyUrl string) *Client {
 
 type doFunc func(req *http.Request) (*http.Response, error)
 
-// Client define API client
+// Client define API client, fieldalignment
 type Client struct {
+	do         doFunc
+	HTTPClient *http.Client
+	Logger     *log.Logger
 	APIKey     string
 	SecretKey  string
 	KeyType    string
 	BaseURL    string
 	UserAgent  string
-	HTTPClient *http.Client
-	Debug      bool
-	Logger     *log.Logger
 	TimeOffset int64
-	do         doFunc
+	Debug      bool
 }
 
 func (c *Client) debug(format string, v ...interface{}) {
@@ -354,7 +355,7 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 	if err != nil {
 		return []byte{}, &http.Header{}, err
 	}
-	data, err = ioutil.ReadAll(res.Body)
+	data, err = io.ReadAll(res.Body)
 	if err != nil {
 		return []byte{}, &http.Header{}, err
 	}
@@ -382,6 +383,85 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 		return nil, &res.Header, apiErr
 	}
 	return data, &res.Header, nil
+}
+
+// callApiBufferPool is a pool for reusing *bytes.Buffer buffers.
+var callApiBufferPool = sync.Pool{
+	New: func() interface{} {
+		// Pre-allocate a buffer with a certain capacity, e.g., 4KB.
+		// This helps avoid allocations for most messages.
+		return bytes.NewBuffer(make([]byte, 0, 4096))
+	},
+}
+
+// callApiWithPool is a wrapper for callAPI that reuses *bytes.Buffer buffers.
+//
+// Important: The data []byte slice passed to the closure is only valid for the duration of the closure's execution.
+// Do not store or use it after the closure returns, as the underlying buffer will be reused.
+func (c *Client) callApiWithPool(ctx context.Context, fn func(data []byte, header *http.Header) error, r *request, opts ...RequestOption) error {
+	err := c.parseRequest(r, opts...)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(r.method, r.fullURL, r.body)
+	if err != nil {
+		return err
+	}
+	req = req.WithContext(ctx)
+	req.Header = r.header
+	c.debug("request: %#v\n", req)
+	f := c.do
+	if f == nil {
+		f = c.HTTPClient.Do
+	}
+	res, err := f(req)
+	if err != nil {
+		return err
+	}
+
+	// Get a buffer from the pool
+	buf := callApiBufferPool.Get().(*bytes.Buffer)
+	// Reset the buffer's state before use
+	buf.Reset()
+
+	// Ensure the buffer is returned to the pool after the function completes
+	defer callApiBufferPool.Put(buf)
+
+	// Read data into the buffer
+	_, err = io.Copy(buf, res.Body)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		bodyCloseErr := res.Body.Close()
+		// Only overwrite the returned error if the original error was nil and an
+		// error occurred while closing the body.
+		if err == nil && bodyCloseErr != nil {
+			err = bodyCloseErr
+		}
+	}()
+
+	if res.StatusCode >= http.StatusBadRequest {
+		apiErr := new(common.APIError)
+		e := json.Unmarshal(buf.Bytes(), apiErr)
+		if e != nil {
+			c.debug("failed to unmarshal json: %s\n", e)
+		}
+		if !apiErr.IsValid() {
+			apiErr.Response = buf.Bytes()
+		}
+
+		return apiErr
+	}
+
+	err = fn(buf.Bytes(), &res.Header)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SetApiEndpoint set api Endpoint

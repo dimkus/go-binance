@@ -50,18 +50,18 @@ type PremiumIndex struct {
 	IndexPrice           string `json:"indexPrice"`
 	EstimatedSettlePrice string `json:"estimatedSettlePrice"`
 	LastFundingRate      string `json:"lastFundingRate"`
-	NextFundingTime      int64  `json:"nextFundingTime"`
 	InterestRate         string `json:"interestRate"`
+	NextFundingTime      int64  `json:"nextFundingTime"`
 	Time                 int64  `json:"time"`
 }
 
 // FundingRateService get funding rate
 type FundingRateService struct {
 	c         *Client
-	symbol    string
 	startTime *int64
 	endTime   *int64
 	limit     *int
+	symbol    string
 }
 
 // Symbol set symbol
@@ -121,8 +121,8 @@ func (s *FundingRateService) Do(ctx context.Context, opts ...RequestOption) (res
 type FundingRate struct {
 	Symbol      string `json:"symbol"`
 	FundingRate string `json:"fundingRate"`
-	FundingTime int64  `json:"fundingTime"`
 	MarkPrice   string `json:"markPrice"`
+	FundingTime int64  `json:"fundingTime"`
 }
 
 // GetLeverageBracketService get funding rate

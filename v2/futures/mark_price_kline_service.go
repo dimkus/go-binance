@@ -9,11 +9,11 @@ import (
 // MarkPriceKlinesService list mark price klines
 type MarkPriceKlinesService struct {
 	c         *Client
-	symbol    string
-	interval  string
 	limit     *int
 	startTime *int64
 	endTime   *int64
+	symbol    string
+	interval  string
 }
 
 // Symbol set symbol

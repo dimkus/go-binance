@@ -13,8 +13,8 @@ type ConstituentsService struct {
 
 type ConstituentsServiceRsp struct {
 	Symbol       string          `json:"symbol"`
-	Time         uint64          `json:"time"`
 	Constituents []*Constituents `json:"constituents"`
+	Time         uint64          `json:"time"`
 }
 
 type Constituents struct {

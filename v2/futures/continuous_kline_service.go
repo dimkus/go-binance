@@ -9,12 +9,12 @@ import (
 // ContinuousKlinesService list klines
 type ContinuousKlinesService struct {
 	c            *Client
-	pair         string
-	contractType string
-	interval     string
 	limit        *int
 	startTime    *int64
 	endTime      *int64
+	pair         string
+	contractType string
+	interval     string
 }
 
 // pair set pair
@@ -106,15 +106,15 @@ func (s *ContinuousKlinesService) Do(ctx context.Context, opts ...RequestOption)
 
 // ContinuousKline define ContinuousKline info
 type ContinuousKline struct {
-	OpenTime                 int64  `json:"openTime"`
 	Open                     string `json:"open"`
 	High                     string `json:"high"`
 	Low                      string `json:"low"`
 	Close                    string `json:"close"`
 	Volume                   string `json:"volume"`
-	CloseTime                int64  `json:"closeTime"`
 	QuoteAssetVolume         string `json:"quoteAssetVolume"`
-	TradeNum                 int64  `json:"tradeNum"`
 	TakerBuyBaseAssetVolume  string `json:"takerBuyBaseAssetVolume"`
 	TakerBuyQuoteAssetVolume string `json:"takerBuyQuoteAssetVolume"`
+	OpenTime                 int64  `json:"openTime"`
+	CloseTime                int64  `json:"closeTime"`
+	TradeNum                 int64  `json:"tradeNum"`
 }
