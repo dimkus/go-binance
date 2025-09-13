@@ -2,8 +2,7 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/mailru/easyjson"
 	"net/http"
 	"sync"
 )
@@ -14,7 +13,7 @@ type GetBalanceService struct {
 }
 
 // Do send request
-func (s *GetBalanceService) Do(ctx context.Context, opts ...RequestOption) (res []*Balance, err error) {
+func (s *GetBalanceService) Do(ctx context.Context, opts ...RequestOption) ([]*Balance, error) {
 	r := &request{
 		method:   http.MethodGet,
 		endpoint: "/fapi/v2/balance",
@@ -22,17 +21,25 @@ func (s *GetBalanceService) Do(ctx context.Context, opts ...RequestOption) (res 
 	}
 	data, _, err := s.c.callAPI(ctx, r, opts...)
 	if err != nil {
-		return []*Balance{}, err
+		return nil, err
 	}
-	res = make([]*Balance, 0)
-	err = json.Unmarshal(data, &res)
+
+	var balanceList AccountBalanceList
+	balanceList = make([]*Balance, 0, 40)
+
+	err = easyjson.Unmarshal(data, &balanceList)
 	if err != nil {
-		return []*Balance{}, err
+		return nil, err
 	}
-	return res, nil
+	return balanceList, nil
 }
 
+// AccountBalanceList define user balance of your account
+// easyjson:json
+type AccountBalanceList []*Balance
+
 // Balance define user balance of your account
+// easyjson:json
 type Balance struct {
 	AccountAlias       string `json:"accountAlias"`
 	Asset              string `json:"asset"`
@@ -60,7 +67,7 @@ func (s *GetAccountService) Do(ctx context.Context, opts ...RequestOption) (res 
 		return nil, err
 	}
 	res = new(Account)
-	err = json.Unmarshal(data, res)
+	err = easyjson.Unmarshal(data, res)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +78,8 @@ func (s *GetAccountService) Do(ctx context.Context, opts ...RequestOption) (res 
 var accountPool = &sync.Pool{
 	New: func() interface{} {
 		return &Account{
-			Positions: make([]*AccountPosition, 0, 10),
-			Assets:    make([]*AccountAsset, 0, 10),
+			Positions: make([]*AccountPosition, 0, 100),
+			Assets:    make([]*AccountAsset, 0, 40),
 		}
 	},
 }
@@ -86,7 +93,7 @@ var accountPool = &sync.Pool{
 //
 // If an error occurs during the request, the account parameter will be nil and the error
 // will be provided through the err parameter.
-func (s *GetAccountService) DoWithPool(ctx context.Context, fn func(account *Account), opts ...RequestOption) error {
+func (s *GetAccountService) DoWithPool(ctx context.Context, fn func(account *Account) error, opts ...RequestOption) error {
 	r := &request{
 		method:   http.MethodGet,
 		endpoint: "/fapi/v2/account",
@@ -98,11 +105,15 @@ func (s *GetAccountService) DoWithPool(ctx context.Context, fn func(account *Acc
 		account.clear()
 		defer accountPool.Put(account)
 
-		errUnmarshal := jsoniter.Unmarshal(data, account)
+		errUnmarshal := easyjson.Unmarshal(data, account)
 		if errUnmarshal != nil {
 			return errUnmarshal
 		}
-		fn(account)
+
+		fnErr := fn(account)
+		if fnErr != nil {
+			return fnErr
+		}
 
 		return nil
 	}, r, opts...)
@@ -115,6 +126,7 @@ func (s *GetAccountService) DoWithPool(ctx context.Context, fn func(account *Acc
 }
 
 // Account define account info, fieldalignment
+// easyjson:json
 type Account struct {
 	TotalInitialMargin          string             `json:"totalInitialMargin"`
 	TotalMaintMargin            string             `json:"totalMaintMargin"`
@@ -141,8 +153,8 @@ type Account struct {
 func (a *Account) clear() {
 	const (
 		maxAssetsCapacity    = 500
-		maxPositionsCapacity = 60
-		defaultCapacity      = 10
+		maxPositionsCapacity = 1500
+		defaultCapacity      = 40
 	)
 
 	a.FeeTier = 0
@@ -187,6 +199,7 @@ func (a *Account) clear() {
 }
 
 // AccountAsset define account asset
+// easyjson:json
 type AccountAsset struct {
 	Asset                  string `json:"asset"`
 	InitialMargin          string `json:"initialMargin"`
@@ -205,6 +218,7 @@ type AccountAsset struct {
 }
 
 // AccountPosition define account position, fieldalignment
+// easyjson:json
 type AccountPosition struct {
 	Leverage               string           `json:"leverage"`
 	InitialMargin          string           `json:"initialMargin"`

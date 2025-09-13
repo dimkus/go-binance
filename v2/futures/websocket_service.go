@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/mailru/easyjson"
 	"strconv"
 	"strings"
 	"sync"
@@ -58,6 +58,7 @@ func getCombinedEndpoint() string {
 }
 
 // WsAggTradeEventMessage define websocket aggTrde event message. fieldalignment
+// easyjson:json
 type WsAggTradeEventMessage struct {
 	Data   *WsAggTradeEvent `json:"data"`
 	Stream string           `json:"stream"`
@@ -71,7 +72,8 @@ func (e *WsAggTradeEventMessage) clear() {
 	}
 }
 
-// WsAggTradeEvent define websocket aggTrde event. fieldalignment
+// WsAggTradeEvent define websocket aggTrade event. fieldalignment
+// easyjson:json
 type WsAggTradeEvent struct {
 	Symbol           string `json:"s"`
 	Event            string `json:"e"`
@@ -108,7 +110,7 @@ func WsAggTradeServe(symbol string, handler WsAggTradeHandler, errHandler ErrHan
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		event := new(WsAggTradeEvent)
-		err := json.Unmarshal(message, &event)
+		err := easyjson.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -141,7 +143,7 @@ func WsCombinedAggTradeServe(symbols []string, handler WsAggTradeHandler, errHan
 		jsonData, _ := json.Marshal(data)
 
 		event := new(WsAggTradeEvent)
-		err = json.Unmarshal(jsonData, event)
+		err = easyjson.Unmarshal(jsonData, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -176,7 +178,7 @@ func WsCombinedAggTradeServeWithContext(ctx context.Context, symbols []string, h
 		jsonData, _ := json.Marshal(data)
 
 		event := new(WsAggTradeEvent)
-		err = json.Unmarshal(jsonData, event)
+		err = easyjson.Unmarshal(jsonData, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -212,7 +214,7 @@ func WsCombinedAggTradeServeWithPoolContext(ctx context.Context, symbols []strin
 
 		defer wsAggTradeEventMessageSyncPool.Put(eventMessage)
 
-		err = jsoniter.Unmarshal(message, eventMessage)
+		err = easyjson.Unmarshal(message, eventMessage)
 		if err != nil {
 			errHandler(err)
 			return
@@ -233,6 +235,7 @@ func WsCombinedAggTradeServeWithPoolContext(ctx context.Context, symbols []strin
 }
 
 // WsMarkPriceEvent define websocket markPriceUpdate event.
+// easyjson:json
 type WsMarkPriceEvent struct {
 	Event                string `json:"e"`
 	Symbol               string `json:"s"`
@@ -251,7 +254,7 @@ func wsMarkPriceServe(endpoint string, handler WsMarkPriceHandler, errHandler Er
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		event := new(WsMarkPriceEvent)
-		err := json.Unmarshal(message, &event)
+		err := easyjson.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -295,7 +298,7 @@ func wsCombinedMarkPriceServe(endpoint string, handler WsMarkPriceHandler, errHa
 		jsonData, _ := json.Marshal(data)
 
 		event := new(WsMarkPriceEvent)
-		err = json.Unmarshal(jsonData, event)
+		err = easyjson.Unmarshal(jsonData, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -381,6 +384,26 @@ func WsAllMarkPriceServeWithRate(rate time.Duration, handler WsAllMarkPriceHandl
 	return wsAllMarkPriceServe(endpoint, handler, errHandler)
 }
 
+// WsAllMarkPriceListHandler handle websocket that pushes price and funding rate for all symbol and rate
+type WsAllMarkPriceListHandler func(eventList WsMarkPriceEventList)
+
+// WsMarkPriceEventList is a list of WsMarkPriceEvent
+// easyjson:json
+type WsMarkPriceEventList []*WsMarkPriceEvent
+
+// GetEventList returns the event list
+func (w WsMarkPriceEventList) GetEventList() []*WsMarkPriceEvent {
+	return w
+}
+
+// clear clears the event list
+func (w *WsMarkPriceEventList) clear() {
+	for i := range *w {
+		(*w)[i] = nil
+	}
+	*w = (*w)[:0]
+}
+
 const (
 	// initialWsAllMarkPriceEventPoolCapacity is the initial capacity of wsAllMarkPriceEventSyncPool
 	initialWsAllMarkPriceEventPoolCapacity = 40
@@ -392,7 +415,7 @@ const (
 // wsAllMarkPriceEventSyncPool is a sync.Pool for WsAllMarkPriceEvent
 var wsAllMarkPriceEventSyncPool = sync.Pool{
 	New: func() any {
-		return make([]*WsMarkPriceEvent, 0, initialWsAllMarkPriceEventPoolCapacity)
+		return make(WsMarkPriceEventList, 0, initialWsAllMarkPriceEventPoolCapacity)
 	},
 }
 
@@ -400,7 +423,7 @@ var wsAllMarkPriceEventSyncPool = sync.Pool{
 // use sync.Pool
 // IMPORTANT: the WsAllMarkPriceEvent pointer passed to closure is only valid during the callback execution.
 // To preserve data, you must copy it. You should not store the pointer itself.
-func WsAllMarkPriceServeWithPoolContext(ctx context.Context, rate time.Duration, handler WsAllMarkPriceHandler, errHandler ErrHandler) error {
+func WsAllMarkPriceServeWithPoolContext(ctx context.Context, rate time.Duration, handler WsAllMarkPriceListHandler, errHandler ErrHandler) error {
 	var rateStr string
 	switch rate {
 	case 3 * time.Second:
@@ -415,29 +438,24 @@ func WsAllMarkPriceServeWithPoolContext(ctx context.Context, rate time.Duration,
 
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
-		events := wsAllMarkPriceEventSyncPool.Get().([]*WsMarkPriceEvent)
+		eventList := wsAllMarkPriceEventSyncPool.Get().(WsMarkPriceEventList)
 
 		// clear old events
-		if len(events) != 0 {
-			events = events[:0]
-		}
+		eventList.clear()
 
 		defer func() {
-			// Don't put excessively large buffers back into the pool.
-			if cap(events) <= maxWsAllMarkPriceEventPoolCapacity {
-				for i := range events {
-					events[i] = nil
-				}
-				wsAllMarkPriceEventSyncPool.Put(events)
+			// do not put too large buffers back into the pool
+			if cap(eventList) <= maxWsAllMarkPriceEventPoolCapacity {
+				wsAllMarkPriceEventSyncPool.Put(eventList)
 			}
 		}()
 
-		err := jsoniter.Unmarshal(message, &events)
+		err := easyjson.Unmarshal(message, &eventList)
 		if err != nil {
 			errHandler(err)
 			return
 		}
-		handler(events)
+		handler(eventList)
 	}
 	return wsServeWithPoolContext(ctx, cfg, wsHandler, errHandler)
 }
@@ -769,6 +787,7 @@ func WsAllMarketTickerServe(handler WsAllMarketTickerHandler, errHandler ErrHand
 }
 
 // WsBookTickerEvent define websocket best book ticker event. fieldalignment
+// easyjson:json
 type WsBookTickerEvent struct {
 	Event           string `json:"e"`
 	Symbol          string `json:"s"`
@@ -803,7 +822,7 @@ func WsBookTickerServe(symbol string, handler WsBookTickerHandler, errHandler Er
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		event := new(WsBookTickerEvent)
-		err := json.Unmarshal(message, &event)
+		err := easyjson.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -819,7 +838,7 @@ func WsAllBookTickerServe(handler WsBookTickerHandler, errHandler ErrHandler) (d
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		event := new(WsBookTickerEvent)
-		err := json.Unmarshal(message, &event)
+		err := easyjson.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -840,7 +859,7 @@ func WsCombinedBookTickerServe(symbols []string, handler WsBookTickerHandler, er
 	cfg := newWsConfig(endpoint)
 	wsHandler := func(message []byte) {
 		event := new(WsBookTickerEvent)
-		err := json.Unmarshal(message, event)
+		err := easyjson.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return
@@ -874,7 +893,7 @@ func WsCombinedBookTickerServeWithPoolContext(ctx context.Context, symbols []str
 		event.clear()
 
 		defer wsBookTickerEventSyncPool.Put(event)
-		err = jsoniter.Unmarshal(message, event)
+		err = easyjson.Unmarshal(message, event)
 		if err != nil {
 			errHandler(err)
 			return

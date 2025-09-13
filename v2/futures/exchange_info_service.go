@@ -2,7 +2,7 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/mailru/easyjson"
 	"net/http"
 
 	"github.com/dimkus/go-binance/v2/common"
@@ -25,7 +25,7 @@ func (s *ExchangeInfoService) Do(ctx context.Context, opts ...RequestOption) (re
 		return nil, err
 	}
 	res = new(ExchangeInfo)
-	err = json.Unmarshal(data, res)
+	err = easyjson.Unmarshal(data, res)
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +34,7 @@ func (s *ExchangeInfoService) Do(ctx context.Context, opts ...RequestOption) (re
 }
 
 // ExchangeInfo exchange info
+// easyjson:json
 type ExchangeInfo struct {
 	Timezone        string        `json:"timezone"`
 	RateLimits      []RateLimit   `json:"rateLimits"`
@@ -43,6 +44,7 @@ type ExchangeInfo struct {
 }
 
 // RateLimit struct
+// easyjson:json
 type RateLimit struct {
 	RateLimitType string `json:"rateLimitType"`
 	Interval      string `json:"interval"`
@@ -51,6 +53,7 @@ type RateLimit struct {
 }
 
 // Symbol market symbol
+// easyjson:json
 type Symbol struct {
 	UnderlyingType        string                   `json:"underlyingType"`
 	Symbol                string                   `json:"symbol"`
@@ -79,6 +82,7 @@ type Symbol struct {
 }
 
 // LotSizeFilter define lot size filter of symbol
+// easyjson:json
 type LotSizeFilter struct {
 	MaxQuantity string `json:"maxQty"`
 	MinQuantity string `json:"minQty"`
@@ -86,6 +90,7 @@ type LotSizeFilter struct {
 }
 
 // PriceFilter define price filter of symbol
+// easyjson:json
 type PriceFilter struct {
 	MaxPrice string `json:"maxPrice"`
 	MinPrice string `json:"minPrice"`
@@ -93,6 +98,7 @@ type PriceFilter struct {
 }
 
 // PercentPriceFilter define percent price filter of symbol
+// easyjson:json
 type PercentPriceFilter struct {
 	MultiplierDecimal string `json:"multiplierDecimal"`
 	MultiplierUp      string `json:"multiplierUp"`
@@ -100,6 +106,7 @@ type PercentPriceFilter struct {
 }
 
 // MarketLotSizeFilter define market lot size filter of symbol
+// easyjson:json
 type MarketLotSizeFilter struct {
 	MaxQuantity string `json:"maxQty"`
 	MinQuantity string `json:"minQty"`
@@ -107,16 +114,19 @@ type MarketLotSizeFilter struct {
 }
 
 // MaxNumOrdersFilter define max num orders filter of symbol
+// easyjson:json
 type MaxNumOrdersFilter struct {
 	Limit int64 `json:"limit"`
 }
 
 // MaxNumAlgoOrdersFilter define max num algo orders filter of symbol
+// easyjson:json
 type MaxNumAlgoOrdersFilter struct {
 	Limit int64 `json:"limit"`
 }
 
 // MinNotionalFilter define min notional filter of symbol
+// easyjson:json
 type MinNotionalFilter struct {
 	Notional string `json:"notional"`
 }
